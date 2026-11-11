@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Ancien point d'entrée, gardé pour les liens ~/.local/bin/board-note créés avant « npm run setup ».
+# L'implémentation est dans board-note.mjs ; relancer « npm run setup » remplace ce lien.
+exec node "$(dirname -- "$(realpath -- "${BASH_SOURCE[0]}")")/board-note.mjs" "$@"

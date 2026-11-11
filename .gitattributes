@@ -1,0 +1,6 @@
+# Shell scripts must keep LF, even on a Windows checkout (core.autocrlf), or bash/sh rejects them.
+*.sh text eol=lf
+scripts/board-note text eol=lf
+# Windows scripts: CRLF.
+*.cmd text eol=crlf
+*.ps1 text eol=crlf

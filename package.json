@@ -1,0 +1,33 @@
+{
+  "name": "claude-board",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev --host 127.0.0.1 --port 4848",
+    "build": "nuxt build",
+    "preview": "node .output/server/index.mjs",
+    "setup": "node scripts/setup.mjs",
+    "setup:remove": "node scripts/setup.mjs --remove",
+    "postinstall": "nuxt prepare",
+    "test": "node --test --import=tsx tests/*.test.ts"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.11.1",
+    "markdown-it": "^14.1.0",
+    "nuxt": "^4.4.0",
+    "shiki": "^1.22.0",
+    "vue": "^3.5.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/markdown-it": "^14.1.2",
+    "@types/node": "^22.7.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "license": "MIT"
+}
