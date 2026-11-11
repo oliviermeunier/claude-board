@@ -152,7 +152,10 @@ d'abord `$OutputEncoding = [Text.UTF8Encoding]::new()`.
   « Tout effacer » ne la touche pas.
 - Recherche dans l'onglet courant (titre et contenu). « Tout effacer » ne vide que l'onglet courant.
 - Cliquer une note pour la déplier. Au survol de l'en-tête : modifier (Ctrl+Entrée enregistre, Échap annule), copier
-  le markdown, supprimer (deux clics). Chaque bloc de code a son bouton copier.
+  le markdown, supprimer. Chaque bloc de code a son bouton copier.
+- **Annuler une suppression** : une note supprimée, ou un onglet vidé avec « Tout effacer », peut être récupéré avec le
+  bouton « Annuler » qui s'affiche quelques secondes en bas de l'écran. Les notes supprimées restent 7 jours dans une
+  corbeille avant d'être effacées pour de bon.
 - En haut à droite : taille du texte (compact, normal, grand) et thème (système, clair, sombre), mémorisés dans le
   navigateur.
 
@@ -185,10 +188,11 @@ Variables d'environnement (à définir avant `npm run setup` pour le service) :
 | POST | `/api/capture` | `{cwd?, session_id?, notes: [{title?, body, pinned?}]}` → crée les notes jamais reçues (utilisé par le hook) |
 | PATCH | `/api/notes/:id` | `{title?, body?, files?, pinned?}` → modifie seulement les champs envoyés (`title: null` efface le titre ; épingler ne marque pas la note « modifiée ») |
 | GET | `/api/notes/:id/files/:index` | Télécharge le n-ième fichier joint |
-| DELETE | `/api/notes/:id` | Supprime |
-| DELETE | `/api/notes` | Supprime toutes les notes non épinglées |
-| DELETE | `/api/notes?project=X` | Supprime les notes non épinglées du projet `X` (`project=` vide : notes sans projet) |
-| GET | `/api/stream` | SSE : `note.created`, `note.updated`, `note.deleted`, `note.cleared` (`project` si effacement ciblé) |
+| DELETE | `/api/notes/:id` | Envoie la note à la corbeille (vidée après 7 jours) |
+| DELETE | `/api/notes` | Envoie à la corbeille toutes les notes non épinglées → `{deleted: ids}` |
+| DELETE | `/api/notes?project=X` | Idem pour le projet `X` (`project=` vide : notes sans projet) |
+| POST | `/api/notes/restore` | `{ids}` → sort ces notes de la corbeille → `{restored: notes}` |
+| GET | `/api/stream` | SSE : `note.created`, `note.updated`, `note.deleted`, `note.restored`, `note.cleared` (`project` si effacement ciblé) |
 | POST | `/api/open` | `{path}` → ouvre le fichier (xdg-open, open, explorer.exe ; limité au dossier personnel) |
 | POST | `/api/reveal` | `{path}` → montre le fichier dans le gestionnaire de fichiers (dossier parent sous Linux) |
 

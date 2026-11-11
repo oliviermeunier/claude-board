@@ -31,6 +31,8 @@
   --primary-hover: #5dd9cd;
   --primary-soft: rgba(46, 196, 182, 0.14);
   --on-primary: #04201d;
+  /* Lagune on an inverted surface (undo bar: light bar on the dark theme). */
+  --primary-on-inverse: #0b7a70;
 
   --highlight: #ffb547;
   --highlight-soft: rgba(255, 181, 71, 0.12);
@@ -63,6 +65,7 @@
   --primary-hover: #086158;
   --primary-soft: rgba(11, 122, 112, 0.1);
   --on-primary: #ffffff;
+  --primary-on-inverse: #5dd9cd;
 
   --highlight: #f59e0b;
   --highlight-soft: #fff4de;
@@ -93,6 +96,7 @@
     --primary-hover: #086158;
     --primary-soft: rgba(11, 122, 112, 0.1);
     --on-primary: #ffffff;
+    --primary-on-inverse: #5dd9cd;
 
     --highlight: #f59e0b;
     --highlight-soft: #fff4de;

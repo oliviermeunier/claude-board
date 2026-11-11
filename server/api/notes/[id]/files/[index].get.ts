@@ -19,7 +19,10 @@ export default defineEventHandler((event) => {
   }
 
   const attachment = useDb()
-    .prepare(`SELECT path FROM attachments WHERE note_id = ? ORDER BY position LIMIT 1 OFFSET ?`)
+    .prepare(
+      `SELECT a.path FROM attachments a JOIN notes n ON n.id = a.note_id
+       WHERE a.note_id = ? AND n.deleted_at IS NULL ORDER BY a.position LIMIT 1 OFFSET ?`,
+    )
     .get(id, index) as { path: string } | undefined
   if (!attachment) throw createError({ statusCode: 404, statusMessage: 'Attachment not found' })
   if (!existsSync(attachment.path) || !statSync(attachment.path).isFile()) {

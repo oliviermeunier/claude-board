@@ -3,7 +3,10 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useNotes, type Note } from '../composables/useNotes'
 import { useSSE } from '../composables/useSSE'
 
-const { list, remove, clear, open, reveal } = useNotes()
+const { list, remove, clear, restore, open, reveal } = useNotes()
+
+// How long the « Annuler » bar stays after a deletion.
+const UNDO_MS = 8000
 
 // Clé d'onglet des notes sans projet (sans fichier, ou fichier hors d'un dossier projet).
 const OTHERS = '__autres__'
@@ -15,6 +18,8 @@ const unreadIds = ref<Set<number>>(new Set())
 const loading = ref(true)
 const error = ref<string | null>(null)
 const confirmClear = ref(false)
+const undo = ref<{ message: string; ids: number[] } | null>(null)
+let undoTimer: ReturnType<typeof setTimeout> | null = null
 
 function tabOf(note: Note): string {
   return note.project ?? OTHERS
@@ -104,11 +109,40 @@ const sse = useSSE({
     }
   },
   onDeleted: (id) => dropNotes((note) => note.id !== id),
+  onRestored: (notes) => mergeNotes(notes),
   onCleared: (project) => {
     if (project === undefined) dropNotes((note) => Boolean(note.pinned_at))
     else dropNotes((note) => note.project !== project || Boolean(note.pinned_at))
   },
 })
+
+// Ajoute des notes (restaurées) à leur place chronologique.
+function mergeNotes(notes: Note[]) {
+  const ids = new Set(notes.map((note) => note.id))
+  allNotes.value = [...allNotes.value.filter((note) => !ids.has(note.id)), ...notes].sort(
+    (a, b) => b.created_at.localeCompare(a.created_at) || b.id - a.id,
+  )
+  ensureActiveTab()
+}
+
+function offerUndo(message: string, ids: number[]) {
+  if (ids.length === 0) return
+  if (undoTimer) clearTimeout(undoTimer)
+  undo.value = { message, ids }
+  undoTimer = setTimeout(() => (undo.value = null), UNDO_MS)
+}
+
+async function onUndo() {
+  if (!undo.value) return
+  const { ids } = undo.value
+  undo.value = null
+  if (undoTimer) clearTimeout(undoTimer)
+  try {
+    mergeNotes(await restore(ids))
+  } catch (e) {
+    error.value = `Erreur de restauration : ${(e as Error).message}`
+  }
+}
 
 // Remplace la note sur place, sans changer son rang : la liste reste triée par date de création.
 function replaceNote(updated: Note): boolean {
@@ -146,16 +180,23 @@ function matchesQuery(note: Note, q: string): boolean {
 }
 
 async function onDelete(id: number) {
-  await remove(id)
+  try {
+    await remove(id)
+  } catch (e) {
+    error.value = `Erreur de suppression : ${(e as Error).message}`
+    return
+  }
   dropNotes((note) => note.id !== id)
+  offerUndo('Note supprimée', [id])
 }
 
 async function onClear() {
   confirmClear.value = false
   const project = activeTab.value === OTHERS ? null : activeTab.value
   try {
-    await clear(project)
+    const ids = await clear(project)
     dropNotes((note) => note.project !== project || Boolean(note.pinned_at))
+    offerUndo(`${ids.length} note${ids.length > 1 ? 's' : ''} effacée${ids.length > 1 ? 's' : ''}`, ids)
   } catch (e) {
     error.value = `Erreur effacement: ${(e as Error).message}`
   }
@@ -274,11 +315,42 @@ onBeforeUnmount(() => {
         @reveal="onReveal"
       />
     </template>
+
+    <div v-if="undo" class="undo-bar" role="status">
+      <span>{{ undo.message }}</span>
+      <button type="button" class="undo-btn" @click="onUndo">Annuler</button>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .dim { color: var(--text-dim); }
+.undo-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 1.5rem;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 0.75rem 0.6rem 1.1rem;
+  background: var(--text);
+  color: var(--bg);
+  border-radius: 999px;
+  box-shadow: var(--shadow);
+  font-size: 0.9375rem;
+  z-index: 10;
+}
+.undo-btn {
+  background: transparent;
+  border: none;
+  color: var(--primary-on-inverse, var(--primary));
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+}
+.undo-btn:hover {
+  background: rgba(127, 127, 127, 0.2);
+}
 .day-separator {
   display: flex;
   align-items: center;

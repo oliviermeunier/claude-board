@@ -49,9 +49,16 @@ export function useNotes() {
     await $fetch(`/api/notes/${id}`, { method: 'DELETE' })
   }
 
-  // project null = notes sans projet.
-  async function clear(project: string | null): Promise<void> {
-    await $fetch('/api/notes', { method: 'DELETE', query: { project: project ?? '' } })
+  // project null = notes sans projet. Renvoie les ids envoyés à la corbeille.
+  async function clear(project: string | null): Promise<number[]> {
+    const res = await $fetch<{ deleted: number[] }>('/api/notes', { method: 'DELETE', query: { project: project ?? '' } })
+    return res.deleted
+  }
+
+  // Sort des notes de la corbeille.
+  async function restore(ids: number[]): Promise<Note[]> {
+    const res = await $fetch<{ restored: Note[] }>('/api/notes/restore', { method: 'POST', body: { ids } })
+    return res.restored
   }
 
   async function open(path: string): Promise<void> {
@@ -69,5 +76,5 @@ export function useNotes() {
     })
   }
 
-  return { list, create, update, remove, clear, open, reveal }
+  return { list, create, update, remove, clear, restore, open, reveal }
 }

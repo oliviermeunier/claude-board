@@ -9,7 +9,10 @@ export default defineEventHandler((event) => {
   }
 
   const db = useDb()
-  const result = db.prepare(`DELETE FROM notes WHERE id = ?`).run(id)
+  // To the trash: POST /api/notes/restore brings it back.
+  const result = db
+    .prepare(`UPDATE notes SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL`)
+    .run(new Date().toISOString(), id)
   if (result.changes === 0) {
     throw createError({ statusCode: 404, statusMessage: 'Note not found' })
   }

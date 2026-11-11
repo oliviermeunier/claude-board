@@ -4,12 +4,14 @@ export type NoteEvent =
   | { type: 'note.created'; note: Note }
   | { type: 'note.updated'; note: Note }
   | { type: 'note.deleted'; id: number }
+  | { type: 'note.restored'; notes: Note[] }
   | { type: 'note.cleared'; project?: string | null }
 
 export interface SSEHandlers {
   onCreated?: (note: Note) => void
   onUpdated?: (note: Note) => void
   onDeleted?: (id: number) => void
+  onRestored?: (notes: Note[]) => void
   // project undefined = tout effacé.
   onCleared?: (project: string | null | undefined) => void
 }
@@ -36,6 +38,11 @@ export function useSSE(handlers: SSEHandlers) {
     source.addEventListener('note.deleted', (msg) => {
       const data = JSON.parse((msg as MessageEvent).data) as Extract<NoteEvent, { type: 'note.deleted' }>
       handlers.onDeleted?.(data.id)
+    })
+
+    source.addEventListener('note.restored', (msg) => {
+      const data = JSON.parse((msg as MessageEvent).data) as Extract<NoteEvent, { type: 'note.restored' }>
+      handlers.onRestored?.(data.notes)
     })
 
     source.addEventListener('note.cleared', (msg) => {

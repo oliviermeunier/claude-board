@@ -143,7 +143,8 @@ test('DELETE /api/notes removes all notes', async () => {
   })
 
   const del = await fetch(`${BASE}/api/notes`, { method: 'DELETE' })
-  assert.equal(del.status, 204)
+  assert.equal(del.status, 200)
+  assert.ok((await del.json()).deleted.length >= 1)
 
   const list = await (await fetch(`${BASE}/api/notes`)).json()
   assert.equal(list.length, 0)
@@ -171,7 +172,8 @@ test('DELETE /api/notes?project=X only removes that project', async () => {
   await post({ body: 'o' })
 
   const del = await fetch(`${BASE}/api/notes?project=alpha`, { method: 'DELETE' })
-  assert.equal(del.status, 204)
+  assert.equal(del.status, 200)
+  assert.equal((await del.json()).deleted.length, 1)
 
   const list = await (await fetch(`${BASE}/api/notes`)).json()
   assert.deepEqual(list.map((n: { body: string }) => n.body).sort(), ['n', 'o'])
@@ -406,4 +408,48 @@ test('épingler : une note capturée avec <note pin> arrive épinglée', async (
   const res = await (await capture({ notes: [{ title: 'Réf', body: 'épinglée par Claude', pinned: true }] })).json()
   const list = await (await fetch(`${BASE}/api/notes`)).json()
   assert.ok(list.find((n: { id: number }) => n.id === res.created[0]).pinned_at)
+})
+
+test('corbeille : une note supprimée disparaît puis revient avec restore', async () => {
+  const created = await (await post({ body: 'à la corbeille', files: [join(tmpDir, 'plan à lire.md')] })).json()
+  assert.equal((await fetch(`${BASE}/api/notes/${created.id}`, { method: 'DELETE' })).status, 204)
+  assert.equal((await fetch(`${BASE}/api/notes/${created.id}`, { method: 'DELETE' })).status, 404)
+
+  let list = await (await fetch(`${BASE}/api/notes`)).json()
+  assert.ok(!list.some((n: { id: number }) => n.id === created.id))
+  assert.equal((await patch(created.id, { body: 'x' })).status, 404)
+  assert.equal((await fetch(`${BASE}/api/notes/${created.id}/files/0`)).status, 404)
+
+  const res = await fetch(`${BASE}/api/notes/restore`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ ids: [created.id, 999_999] }),
+  })
+  const { restored } = await res.json()
+  assert.deepEqual(restored.map((n: { id: number }) => n.id), [created.id])
+  assert.deepEqual(restored[0].files, created.files)
+
+  list = await (await fetch(`${BASE}/api/notes`)).json()
+  assert.ok(list.some((n: { id: number }) => n.id === created.id))
+})
+
+test('corbeille : « Tout effacer » renvoie les notes effacées, restaurables', async () => {
+  await post({ body: 'effacée puis rendue', cwd: join(tmpDir, 'retour') })
+  const { deleted } = await (await fetch(`${BASE}/api/notes?project=retour`, { method: 'DELETE' })).json()
+  assert.equal(deleted.length, 1)
+
+  await fetch(`${BASE}/api/notes/restore`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ ids: deleted }),
+  })
+  const list = await (await fetch(`${BASE}/api/notes`)).json()
+  assert.ok(list.some((n: { body: string }) => n.body === 'effacée puis rendue'))
+
+  const bad = await fetch(`${BASE}/api/notes/restore`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ ids: ['x'] }),
+  })
+  assert.equal(bad.status, 400)
 })

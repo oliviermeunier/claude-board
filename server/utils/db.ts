@@ -18,6 +18,8 @@ export interface NoteRow {
 
 export const NOTE_COLUMNS = 'id, title, body, created_at, updated_at, cwd, session_id, pinned_at'
 
+const TRASH_DAYS = 7
+
 let dbInstance: Database.Database | null = null
 
 function resolveDbPath(): string {
@@ -66,7 +68,7 @@ export function useDb(): Database.Database {
   }
 
   const noteColumns = db.prepare(`PRAGMA table_info(notes)`).all() as { name: string }[]
-  for (const column of ['updated_at', 'cwd', 'session_id', 'pinned_at']) {
+  for (const column of ['updated_at', 'cwd', 'session_id', 'pinned_at', 'deleted_at']) {
     if (!noteColumns.some((existing) => existing.name === column)) {
       db.exec(`ALTER TABLE notes ADD COLUMN ${column} TEXT`)
     }
@@ -81,6 +83,10 @@ export function useDb(): Database.Database {
       captured_at  TEXT NOT NULL
     );
   `)
+
+  // Deleted notes go to a trash (deleted_at set) so that a deletion can be undone; emptied after 7 days.
+  const trashLimit = new Date(Date.now() - TRASH_DAYS * 24 * 60 * 60 * 1000).toISOString()
+  db.prepare(`DELETE FROM notes WHERE deleted_at IS NOT NULL AND deleted_at < ?`).run(trashLimit)
 
   dbInstance = db
   return db

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, nextTick, onBeforeUnmount } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { useNotes, type Note } from '../composables/useNotes'
 
 const props = defineProps<{ note: Note; unread: boolean }>()
@@ -12,13 +12,8 @@ const emit = defineEmits<{
 
 const { update } = useNotes()
 
-// How long the delete button stays armed waiting for the confirming click.
-const CONFIRM_DELAY_MS = 4000
-
 const expanded = ref(false)
-const confirmDelete = ref(false)
 const copyState = ref<'idle' | 'copied'>('idle')
-let disarmTimer: ReturnType<typeof setTimeout> | null = null
 
 const editing = ref(false)
 const saving = ref(false)
@@ -77,21 +72,9 @@ async function copyBody() {
   }
 }
 
-function disarm() {
-  confirmDelete.value = false
-  if (disarmTimer) clearTimeout(disarmTimer)
-  disarmTimer = null
-}
-
-// First click arms the button, second click on the same spot deletes.
+// One click: the note goes to the trash, and the board offers to undo.
 function onDeleteClick() {
-  if (confirmDelete.value) {
-    disarm()
-    emit('delete', props.note.id)
-    return
-  }
-  confirmDelete.value = true
-  disarmTimer = setTimeout(disarm, CONFIRM_DELAY_MS)
+  emit('delete', props.note.id)
 }
 
 function toggle() {
@@ -148,11 +131,10 @@ async function togglePin() {
 
 defineExpose({ togglePin })
 
-onBeforeUnmount(disarm)
 </script>
 
 <template>
-  <article class="card" :class="{ expanded, unread, pinned: note.pinned_at }" @mouseleave="disarm">
+  <article class="card" :class="{ expanded, unread, pinned: note.pinned_at }">
     <header class="head" @click="toggle">
       <span class="badge" v-if="unread" title="Nouveau">●</span>
       <span class="headline">{{ headline }}</span>
@@ -230,12 +212,10 @@ onBeforeUnmount(disarm)
       <button
         type="button"
         class="delete-btn"
-        :class="{ armed: confirmDelete }"
-        :title="confirmDelete ? 'Cliquer encore pour supprimer' : 'Supprimer'"
-        :aria-label="confirmDelete ? 'Confirmez la suppression' : 'Supprimer la note'"
+        title="Supprimer (annulable)"
+        aria-label="Supprimer la note"
         @click.stop="onDeleteClick"
       >
-        <span v-if="confirmDelete" class="delete-label">Confirmez la suppression</span>
         <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
           <path
             d="M6 2h4M2.5 4h11M4 4l.7 9.1c.05.5.47.9.98.9h4.64c.51 0 .93-.4.98-.9L12 4M6.5 6.5v5M9.5 6.5v5"
@@ -587,22 +567,12 @@ onBeforeUnmount(disarm)
   white-space: nowrap;
 }
 .head:hover .delete-btn,
-.delete-btn:focus-visible,
-.delete-btn.armed {
+.delete-btn:focus-visible {
   opacity: 1;
 }
 .delete-btn:hover {
   color: var(--danger);
   background: var(--bg-elev-2);
-}
-.delete-btn.armed,
-.delete-btn.armed:hover {
-  padding: 3px 8px 3px 10px;
-  background: var(--danger);
-  border-color: var(--danger);
-  color: var(--on-danger);
-  font-size: 0.8125rem;
-  font-weight: 600;
 }
 .body-wrap {
   padding: 0.35rem 1.1rem 1.1rem;

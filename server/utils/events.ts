@@ -5,6 +5,7 @@ export type NoteEvent =
   | { type: 'note.created'; note: Note }
   | { type: 'note.updated'; note: Note }
   | { type: 'note.deleted'; id: number }
+  | { type: 'note.restored'; notes: Note[] }
   // project absent = tout effacé ; null = notes sans projet.
   | { type: 'note.cleared'; project?: string | null }
 

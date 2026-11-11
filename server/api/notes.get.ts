@@ -12,7 +12,7 @@ export default defineEventHandler((event): Note[] => {
       .prepare(
         `SELECT ${NOTE_COLUMNS}
          FROM notes
-         WHERE COALESCE(title, '') LIKE ? OR body LIKE ?
+         WHERE deleted_at IS NULL AND (COALESCE(title, '') LIKE ? OR body LIKE ?)
          ORDER BY created_at DESC, id DESC`,
       )
       .all(like, like) as NoteRow[]
@@ -21,6 +21,7 @@ export default defineEventHandler((event): Note[] => {
       .prepare(
         `SELECT ${NOTE_COLUMNS}
          FROM notes
+         WHERE deleted_at IS NULL
          ORDER BY created_at DESC, id DESC`,
       )
       .all() as NoteRow[]

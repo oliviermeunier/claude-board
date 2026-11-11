@@ -20,7 +20,7 @@ export default defineEventHandler(async (event): Promise<Note> => {
   }
 
   const db = useDb()
-  const selectNote = db.prepare(`SELECT ${NOTE_COLUMNS} FROM notes WHERE id = ?`)
+  const selectNote = db.prepare(`SELECT ${NOTE_COLUMNS} FROM notes WHERE id = ? AND deleted_at IS NULL`)
   const current = selectNote.get(id) as NoteRow | undefined
   if (!current) {
     throw createError({ statusCode: 404, statusMessage: 'Note not found' })
