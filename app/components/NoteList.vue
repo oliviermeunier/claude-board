@@ -39,7 +39,8 @@ const tabs = computed(() => {
 })
 
 const tabNotes = computed(() => allNotes.value.filter((note) => tabOf(note) === activeTab.value))
-const notes = computed(() => (query.value ? tabNotes.value.filter((note) => matchesQuery(note, query.value)) : tabNotes.value))
+// A search looks through every project, not only the open tab.
+const notes = computed(() => (query.value ? allNotes.value.filter((note) => matchesQuery(note, query.value)) : tabNotes.value))
 // Pinned notes are listed first, without day separators; « Tout effacer » leaves them alone.
 const pinnedNotes = computed(() => notes.value.filter((note) => note.pinned_at))
 const otherNotes = computed(() => notes.value.filter((note) => !note.pinned_at))
@@ -174,6 +175,10 @@ function dayLabel(note: Note): string {
   return label.charAt(0).toUpperCase() + label.slice(1)
 }
 
+function projectLabel(note: Note): string {
+  return note.project ?? 'Autres'
+}
+
 function matchesQuery(note: Note, q: string): boolean {
   const needle = q.toLowerCase()
   return (note.title?.toLowerCase().includes(needle) ?? false) || note.body.toLowerCase().includes(needle)
@@ -287,6 +292,9 @@ onBeforeUnmount(() => {
       <p>Depuis un terminal : <code>board-note "Titre" &lt;&lt;&lt; "corps en markdown"</code></p>
     </div>
     <p v-else-if="notes.length === 0" class="dim empty">Aucun résultat pour « {{ query }} ».</p>
+    <p v-else-if="query" class="search-summary">
+      {{ notes.length }} résultat{{ notes.length > 1 ? 's' : '' }} dans tous les projets
+    </p>
 
     <template v-if="pinnedNotes.length > 0">
       <div class="day-separator pinned-separator"><span>Épinglées</span></div>
@@ -295,6 +303,7 @@ onBeforeUnmount(() => {
         :key="note.id"
         :note="note"
         :unread="unreadIds.has(note.id)"
+        :project-label="query ? projectLabel(note) : null"
         @delete="onDelete"
         @updated="replaceNote"
         @open="onOpen"
@@ -309,6 +318,7 @@ onBeforeUnmount(() => {
       <NoteCard
         :note="note"
         :unread="unreadIds.has(note.id)"
+        :project-label="query ? projectLabel(note) : null"
         @delete="onDelete"
         @updated="replaceNote"
         @open="onOpen"
@@ -361,6 +371,11 @@ onBeforeUnmount(() => {
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+.search-summary {
+  margin: 0 0 0.75rem;
+  color: var(--text-dim);
+  font-size: 0.875rem;
 }
 .pinned-separator {
   color: var(--primary);

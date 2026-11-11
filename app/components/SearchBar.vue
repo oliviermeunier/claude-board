@@ -22,7 +22,7 @@ watch(() => props.modelValue, (v) => {
     <input
       v-model="local"
       type="search"
-      placeholder="Rechercher dans les notes…"
+      placeholder="Rechercher dans toutes les notes…"
       autocomplete="off"
       spellcheck="false"
     />

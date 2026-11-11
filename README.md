@@ -150,7 +150,8 @@ d'abord `$OutputEncoding = [Text.UTF8Encoding]::new()`.
 - À l'ouverture, l'onglet affiché est celui de la note la plus récente ; une note arrivée ailleurs y pose une pastille.
 - **Épingler** (punaise au survol de l'en-tête) : la note passe en haut de son onglet, avec un liseré sarcelle, et
   « Tout effacer » ne la touche pas.
-- Recherche dans l'onglet courant (titre et contenu). « Tout effacer » ne vide que l'onglet courant.
+- **Recherche** dans toutes les notes, tous projets confondus (titre et contenu) ; le projet de chaque résultat est
+  indiqué devant son titre. « Tout effacer » ne vide que l'onglet courant.
 - Cliquer une note pour la déplier. Au survol de l'en-tête : modifier (Ctrl+Entrée enregistre, Échap annule), copier
   le markdown, supprimer. Chaque bloc de code a son bouton copier.
 - **Annuler une suppression** : une note supprimée, ou un onglet vidé avec « Tout effacer », peut être récupéré avec le

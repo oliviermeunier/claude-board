@@ -2,7 +2,8 @@
 import { ref, computed, nextTick } from 'vue'
 import { useNotes, type Note } from '../composables/useNotes'
 
-const props = defineProps<{ note: Note; unread: boolean }>()
+// projectLabel: shown before the title when the card is listed outside its tab (search results).
+const props = defineProps<{ note: Note; unread: boolean; projectLabel?: string | null }>()
 const emit = defineEmits<{
   delete: [id: number]
   open: [path: string]
@@ -137,6 +138,7 @@ defineExpose({ togglePin })
   <article class="card" :class="{ expanded, unread, pinned: note.pinned_at }">
     <header class="head" @click="toggle">
       <span class="badge" v-if="unread" title="Nouveau">●</span>
+      <span v-if="projectLabel" class="project-chip">{{ projectLabel }}</span>
       <span class="headline">{{ headline }}</span>
       <span v-if="note.files.length > 0" class="files-count" :title="filesLabel" :aria-label="filesLabel">
         <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
@@ -331,6 +333,20 @@ defineExpose({ togglePin })
 }
 .card.pinned.expanded {
   box-shadow: inset 3px 0 0 var(--primary), var(--shadow);
+}
+.project-chip {
+  flex-shrink: 0;
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 0.55rem;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.5rem;
 }
 .pin-btn {
   display: inline-flex;
