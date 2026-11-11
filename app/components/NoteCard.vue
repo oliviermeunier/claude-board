@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, nextTick } from 'vue'
 import { useNotes, type Note } from '../composables/useNotes'
+import { canResume, resumeCommand } from '../utils/resume'
 
 // projectLabel: shown before the title when the card is listed outside its tab (search results).
 const props = defineProps<{ note: Note; unread: boolean; projectLabel?: string | null }>()
@@ -115,6 +116,20 @@ async function saveEdit() {
     editError.value = `Erreur d'enregistrement : ${(e as Error).message}`
   } finally {
     saving.value = false
+  }
+}
+
+const resumeState = ref<'idle' | 'copied'>('idle')
+
+async function copyResume() {
+  if (!canResume(props.note.session_id)) return
+  const windows = /win/i.test(navigator.platform || navigator.userAgent)
+  try {
+    await navigator.clipboard.writeText(resumeCommand(props.note.session_id, props.note.cwd, windows))
+    resumeState.value = 'copied'
+    setTimeout(() => (resumeState.value = 'idle'), 2000)
+  } catch {
+    /* clipboard blocked */
   }
 }
 
@@ -311,6 +326,19 @@ defineExpose({ togglePin })
         </div>
       </form>
       <NoteBody v-else :source="note.body" :note-id="note.id" />
+      <footer v-if="note.cwd || canResume(note.session_id)" class="meta">
+        <span v-if="note.cwd" class="meta-path" :title="note.cwd">{{ note.cwd }}</span>
+        <button
+          v-if="canResume(note.session_id)"
+          type="button"
+          class="resume-btn"
+          :class="{ copied: resumeState === 'copied' }"
+          title="Copie la commande qui rouvre, dans son dossier, la conversation Claude Code d’où vient cette note"
+          @click.stop="copyResume"
+        >
+          {{ resumeState === 'copied' ? 'Commande copiée — à coller dans un terminal' : 'Reprendre la session Claude' }}
+        </button>
+      </footer>
     </section>
   </article>
 </template>
@@ -333,6 +361,41 @@ defineExpose({ togglePin })
 }
 .card.pinned.expanded {
   box-shadow: inset 3px 0 0 var(--primary), var(--shadow);
+}
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin-top: 0.9rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--border);
+  font-size: 0.8125rem;
+  color: var(--text-dim);
+}
+.meta-path {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'Cascadia Code', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.resume-btn {
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.resume-btn:hover {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+.resume-btn.copied {
+  border-color: transparent;
 }
 .project-chip {
   flex-shrink: 0;

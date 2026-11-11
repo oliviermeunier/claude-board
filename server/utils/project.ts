@@ -1,6 +1,6 @@
 import { basename, parse, relative, resolve, sep } from 'node:path'
 import { useDb, type NoteRow } from './db'
-import { docsRoot, homeDir, relativeInside } from './paths'
+import { docsRoot, gitRoot, homeDir, relativeInside } from './paths'
 
 export interface Note extends NoteRow {
   files: string[]
@@ -17,12 +17,14 @@ export function projectOf(filePath: string | null | undefined): string | null {
 }
 
 // Project of the folder a note was written from: the first folder under the docs root,
-// otherwise the folder's own name. The home directory, its parents and drive roots have none.
+// otherwise the name of the git repository holding it (or of the folder itself outside a repository).
+// The home directory, its parents and drive roots have none.
 export function projectOfCwd(cwd: string | null | undefined): string | null {
   if (!cwd) return null
   const rel = relativeInside(docsRoot(), cwd)
   if (rel) return rel.split(sep)[0] || null
-  const dir = resolve(cwd)
+  const folder = resolve(cwd)
+  const dir = gitRoot(folder) ?? folder
   const home = homeDir()
   const isHomeOrAbove = relative(dir, home) === '' || relativeInside(dir, home) !== null
   if (dir === parse(dir).root || isHomeOrAbove) return null

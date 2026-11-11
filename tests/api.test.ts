@@ -1,6 +1,6 @@
 import { test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process'
@@ -452,4 +452,15 @@ test('corbeille : « Tout effacer » renvoie les notes effacées, restaurables',
     body: JSON.stringify({ ids: ['x'] }),
   })
   assert.equal(bad.status, 400)
+})
+
+test('projet : une note écrite dans un sous-dossier va dans le dépôt git qui le contient', async () => {
+  const repo = join(tmpDir, 'mon-depot')
+  mkdirSync(join(repo, '.git'), { recursive: true })
+  mkdirSync(join(repo, 'src', 'lib'), { recursive: true })
+
+  const note = await (await post({ body: 'depuis src/lib', cwd: join(repo, 'src', 'lib') })).json()
+  assert.equal(note.project, 'mon-depot')
+  // Le dossier réel est gardé : la commande de reprise de session en a besoin.
+  assert.equal(note.cwd, join(repo, 'src', 'lib'))
 })

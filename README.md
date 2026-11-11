@@ -144,8 +144,8 @@ d'abord `$OutputEncoding = [Text.UTF8Encoding]::new()`.
 
 - **Un onglet par projet.** Le projet d'une note est, dans l'ordre :
   1. le premier dossier sous `BOARD_DOCS_ROOT` (défaut `~/Documents/Claude`) de son premier fichier joint ;
-  2. sinon le dossier depuis lequel elle a été envoyée : le dépôt git qui le contient (une note écrite dans
-     `~/code/mon-app/src` va dans « mon-app »), ou le premier dossier sous `BOARD_DOCS_ROOT` ;
+  2. sinon le dossier depuis lequel elle a été envoyée : le premier dossier sous `BOARD_DOCS_ROOT`, sinon le dépôt
+     git qui le contient (une note écrite dans `~/code/mon-app/src` va dans « mon-app »), sinon le dossier lui-même ;
   3. sinon « Autres » (note envoyée depuis le dossier personnel, par exemple).
 - À l'ouverture, l'onglet affiché est celui de la note la plus récente ; une note arrivée ailleurs y pose une pastille.
 - **Épingler** (punaise au survol de l'en-tête) : la note passe en haut de son onglet, avec un liseré sarcelle, et
@@ -154,6 +154,9 @@ d'abord `$OutputEncoding = [Text.UTF8Encoding]::new()`.
   indiqué devant son titre. « Tout effacer » ne vide que l'onglet courant.
 - Cliquer une note pour la déplier. Au survol de l'en-tête : modifier (Ctrl+Entrée enregistre, Échap annule), copier
   le markdown, supprimer. Chaque bloc de code a son bouton copier.
+- **Reprendre la session** : une note venue de Claude Code affiche, dépliée, le dossier de la session et un bouton qui
+  copie la commande pour rouvrir cette conversation (`cd <dossier> && claude --resume <session>`), à coller dans un
+  terminal.
 - **Annuler une suppression** : une note supprimée, ou un onglet vidé avec « Tout effacer », peut être récupéré avec le
   bouton « Annuler » qui s'affiche quelques secondes en bas de l'écran. Les notes supprimées restent 7 jours dans une
   corbeille avant d'être effacées pour de bon.

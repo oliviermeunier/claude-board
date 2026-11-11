@@ -1,5 +1,6 @@
+import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { isAbsolute, join, relative, sep } from 'node:path'
+import { dirname, isAbsolute, join, relative, sep } from 'node:path'
 
 // os.homedir() reads HOME on Linux/macOS and USERPROFILE on Windows, where HOME is usually unset.
 export function homeDir(): string {
@@ -12,6 +13,26 @@ export function defaultDbPath(): string {
 
 export function docsRoot(): string {
   return process.env.BOARD_DOCS_ROOT || join(homeDir(), 'Documents', 'Claude')
+}
+
+const gitRoots = new Map<string, string | null>()
+
+// Nearest folder holding .git (cached: notes are listed often, folders rarely change).
+export function gitRoot(dir: string): string | null {
+  if (gitRoots.has(dir)) return gitRoots.get(dir)!
+  let current = dir
+  let found: string | null = null
+  while (true) {
+    if (existsSync(join(current, '.git'))) {
+      found = current
+      break
+    }
+    const parent = dirname(current)
+    if (parent === current) break
+    current = parent
+  }
+  gitRoots.set(dir, found)
+  return found
 }
 
 // Path of `child` relative to `parent`, or null when `child` is not strictly inside it.

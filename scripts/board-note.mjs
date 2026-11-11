@@ -26,7 +26,7 @@
 import { readFileSync } from 'node:fs'
 import { basename, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { BOARD_URL, projectRoot } from './lib/board.mjs'
+import { BOARD_URL } from './lib/board.mjs'
 
 const STDIN_WAIT_MS = 500
 
@@ -118,7 +118,7 @@ if (editId) {
   // Sans body sur stdin, le body par défaut liste les fichiers joints.
   const finalBody = body || files.map((f) => `- \`${basename(f)}\``).join('\n')
   if (!finalBody) fail('body vide (ni stdin ni --file)', 2)
-  payload = { title: title || null, body: finalBody, files, cwd: projectRoot(process.cwd()), pinned: pinned === true }
+  payload = { title: title || null, body: finalBody, files, cwd: process.cwd(), pinned: pinned === true }
   method = 'POST'
   url = `${BOARD_URL}/api/notes`
   expected = 201

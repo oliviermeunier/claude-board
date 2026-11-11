@@ -2,7 +2,7 @@
 import { spawn } from 'node:child_process'
 import { existsSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { dirname, join, parse, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
@@ -75,15 +75,4 @@ export async function stopServer() {
   rmSync(PID_FILE, { force: true })
   await waitUntil(async () => !(await isUp()), 5000)
   return `board arrêté (pid ${pid})`
-}
-
-// Nearest folder holding .git, so that a note written from a subfolder lands in the project's tab.
-export function projectRoot(dir) {
-  let current = resolve(dir)
-  while (true) {
-    if (existsSync(join(current, '.git'))) return current
-    const parent = dirname(current)
-    if (parent === current || current === parse(current).root) return resolve(dir)
-    current = parent
-  }
 }

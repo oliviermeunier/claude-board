@@ -7,7 +7,7 @@
 // Le hook ne fait jamais échouer Claude Code : toute erreur est ignorée (sortie 0).
 
 import { readFileSync } from 'node:fs'
-import { BOARD_URL, projectRoot, startServer } from './lib/board.mjs'
+import { BOARD_URL, startServer } from './lib/board.mjs'
 import { notesFromTranscript } from './lib/transcript.mjs'
 
 const BATCH = 100
@@ -37,8 +37,9 @@ async function onStop(input) {
   const notes = notesFromTranscript(readFileSync(input.transcript_path, 'utf8'))
   if (notes.length === 0) return
 
+  // The session's own folder: the board derives the project from it, and « Reprendre la session » needs it.
   const base = {
-    cwd: input.cwd ? projectRoot(input.cwd) : null,
+    cwd: input.cwd ?? null,
     session_id: input.session_id ?? null,
   }
   // The whole transcript is sent every time: the board skips notes it already has,
