@@ -36,7 +36,8 @@ Puis ouvrir <http://127.0.0.1:4848>.
    `%USERPROFILE%\.local\bin`) ;
 3. ajoute deux hooks Claude Code dans `~/.claude/settings.json` : au démarrage de chaque session Claude Code, le
    serveur est lancé s'il ne tourne pas ; à la fin de chaque réponse, les notes sont envoyées au board. Les autres
-   réglages et hooks sont conservés, et une copie est faite dans `settings.json.board-backup` ;
+   réglages et hooks sont conservés, et une copie est faite dans `settings.json.board-backup`. Enregistre aussi le
+   serveur MCP `claude-board`, qui permet à Claude de lire le board (voir plus bas) ;
 4. lance aussi le serveur à l'ouverture de session de l'ordinateur : service systemd utilisateur (Linux),
    LaunchAgent (macOS), raccourci dans le dossier Démarrage (Windows) ;
 5. démarre le serveur.
@@ -113,6 +114,17 @@ Corps en **markdown**, blocs de code compris.
 - `<note pin>` au lieu de `<note>` crée une note épinglée ;
 - le hook relit tout le transcript à chaque fois, donc une note manquée (serveur arrêté) est rattrapée à la réponse
   suivante. Une note déjà reçue n'est jamais recréée, même si tu l'as supprimée entre-temps.
+
+### Claude peut lire le board
+
+Le serveur MCP `claude-board` donne à Claude deux outils en lecture seule :
+
+- `board_search` : cherche dans les notes (par défaut celles du projet courant, `scope: "tous"` pour tous les
+  projets ; `pinned_only` pour les seules notes épinglées) ;
+- `board_read` : lit une note en entier.
+
+On peut donc demander « qu'est-ce que j'ai épinglé sur ce projet ? » ou « reprends la note sur la migration ». Les
+notes épinglées servent ainsi de mémoire de projet.
 
 ### Depuis un terminal
 
@@ -192,7 +204,7 @@ Variables d'environnement (à définir avant `npm run setup` pour le service) :
 
 | Verbe | Route | Description |
 |---|---|---|
-| GET | `/api/notes?q=…` | Liste anté-chrono, filtre optionnel |
+| GET | `/api/notes?q=…&cwd=…` | Liste anté-chrono ; `q` filtre sur le texte, `cwd` garde le projet de ce dossier |
 | POST | `/api/notes` | `{title?, body, files?: string[], cwd?, session_id?, pinned?}` → crée (`file_path` seul encore accepté) |
 | POST | `/api/capture` | `{cwd?, session_id?, notes: [{title?, body, pinned?}]}` → crée les notes jamais reçues (utilisé par le hook) |
 | PATCH | `/api/notes/:id` | `{title?, body?, files?, pinned?}` → modifie seulement les champs envoyés (`title: null` efface le titre ; épingler ne marque pas la note « modifiée ») |
@@ -224,6 +236,7 @@ scripts/
   board-note.mjs      CLI d'envoi de notes
   board-server.mjs    démarrer / arrêter / état du serveur
   claude-hook.mjs     hooks Claude Code (SessionStart, Stop)
+  mcp-server.mjs      serveur MCP (lecture du board par Claude)
   lib/                fonctions partagées (serveur, lecture du transcript, réglages Claude)
 tests/
 ```

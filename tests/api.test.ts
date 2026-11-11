@@ -464,3 +464,69 @@ test('projet : une note écrite dans un sous-dossier va dans le dépôt git qui 
   // Le dossier réel est gardé : la commande de reprise de session en a besoin.
   assert.equal(note.cwd, join(repo, 'src', 'lib'))
 })
+
+// Talks to the MCP server over stdio, as Claude Code does.
+async function mcpSession(cwd: string, messages: object[]): Promise<Map<number, any>> {
+  const child = spawn(process.execPath, [fileURLToPath(new URL('../scripts/mcp-server.mjs', import.meta.url))], {
+    cwd,
+    env: { ...process.env, BOARD_URL: BASE },
+    stdio: ['pipe', 'pipe', 'inherit'],
+  })
+  const responses = new Map<number, any>()
+  const expected = messages.filter((m: any) => m.id !== undefined).length
+  let buffer = ''
+  await new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('MCP timeout')), 15_000)
+    child.stdout!.on('data', (chunk) => {
+      buffer += chunk
+      let newline
+      while ((newline = buffer.indexOf('\n')) !== -1) {
+        const message = JSON.parse(buffer.slice(0, newline))
+        buffer = buffer.slice(newline + 1)
+        responses.set(message.id, message)
+        if (responses.size === expected) {
+          clearTimeout(timer)
+          resolve()
+        }
+      }
+    })
+    for (const message of messages) child.stdin!.write(`${JSON.stringify(message)}\n`)
+  })
+  child.kill()
+  return responses
+}
+
+test('MCP : initialize, liste des outils, recherche dans le projet courant et lecture', async () => {
+  const project = join(tmpDir, 'projet-mcp')
+  mkdirSync(join(project, '.git'), { recursive: true })
+  const pinned = await (await post({ title: 'Déploiement', body: 'scp puis restart', cwd: project, pinned: true })).json()
+  await post({ title: 'Autre projet', body: 'scp ailleurs', cwd: join(tmpDir, 'ailleurs') })
+
+  const call = (id: number, name: string, args: object) => ({ jsonrpc: '2.0', id, method: 'tools/call', params: { name, arguments: args } })
+  const responses = await mcpSession(project, [
+    { jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'test', version: '0' } } },
+    { jsonrpc: '2.0', method: 'notifications/initialized' },
+    { jsonrpc: '2.0', id: 2, method: 'tools/list' },
+    call(3, 'board_search', { query: 'scp' }),
+    call(4, 'board_search', { query: 'scp', scope: 'tous' }),
+    call(5, 'board_read', { id: pinned.id }),
+    call(6, 'board_read', { id: 999_999 }),
+    { jsonrpc: '2.0', id: 7, method: 'nimporte/quoi' },
+  ])
+
+  assert.equal(responses.get(1).result.protocolVersion, '2025-06-18')
+  assert.equal(responses.get(1).result.serverInfo.name, 'claude-board')
+  assert.deepEqual(responses.get(2).result.tools.map((t: { name: string }) => t.name), ['board_search', 'board_read'])
+
+  const inProject = responses.get(3).result.content[0].text
+  assert.match(inProject, /Déploiement/)
+  assert.match(inProject, /épinglée/)
+  assert.doesNotMatch(inProject, /Autre projet/)
+  assert.match(responses.get(4).result.content[0].text, /Autre projet/)
+
+  const read = responses.get(5).result.content[0].text
+  assert.match(read, /# Déploiement/)
+  assert.match(read, /scp puis restart/)
+  assert.equal(responses.get(6).result.isError, true)
+  assert.equal(responses.get(7).error.code, -32601)
+})

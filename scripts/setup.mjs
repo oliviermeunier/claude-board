@@ -10,6 +10,7 @@
 //   1. build Nuxt
 //   2. commandes board-note et board-server dans ~/.local/bin
 //   3. hooks Claude Code dans ~/.claude/settings.json (copie de sauvegarde : settings.json.board-backup)
+//      et serveur MCP « claude-board » (claude mcp add --scope user) pour que Claude puisse lire le board
 //   4. lancement à l'ouverture de session : service systemd --user (Linux), LaunchAgent (macOS),
 //      raccourci dans le dossier Démarrage (Windows)
 //   5. démarrage du serveur
@@ -133,6 +134,31 @@ function installClaudeHooks() {
     (settings) => addBoardHooks(settings, (event) => `"${posix(NODE)}" "${hook}" ${event}`),
     `hooks Claude Code (SessionStart, Stop) → ${CLAUDE_SETTINGS}`,
   )
+}
+
+const MCP_NAME = 'claude-board'
+
+function claudeCli(args) {
+  // One command string: `claude` can be a .cmd shim on Windows, which needs a shell.
+  return spawnSync(`claude ${args}`, { stdio: 'ignore', shell: true })
+}
+
+function installMcpServer() {
+  if (claudeCli('--version').status !== 0) {
+    warn('commande « claude » introuvable : serveur MCP non enregistré (relancer « npm run setup » après avoir installé Claude Code).')
+    return
+  }
+  claudeCli(`mcp remove --scope user ${MCP_NAME}`)
+  const script = posix(join(ROOT, 'scripts', 'mcp-server.mjs'))
+  const result = claudeCli(`mcp add --scope user ${MCP_NAME} -- "${posix(NODE)}" "${script}"`)
+  if (result.status === 0) ok(`serveur MCP « ${MCP_NAME} » enregistré dans Claude Code (lecture du board)`)
+  else warn(`l'enregistrement du serveur MCP a échoué ; à la main : claude mcp add --scope user ${MCP_NAME} -- node "${script}"`)
+}
+
+function removeMcpServer() {
+  if (claudeCli('--version').status !== 0) return
+  claudeCli(`mcp remove --scope user ${MCP_NAME}`)
+  ok(`serveur MCP « ${MCP_NAME} » retiré`)
 }
 
 // ── 4. Autostart ────────────────────────────────────────────────────────────
@@ -265,6 +291,7 @@ if (REMOVE) {
   removeAutostart()
   removeCommands()
   updateClaudeSettings(removeBoardHooks, 'hooks Claude Code retirés')
+  removeMcpServer()
   console.log('\nClaude Board désinstallé. Notes conservées dans ~/.board/board.db.')
   process.exit(0)
 }
@@ -272,7 +299,10 @@ if (REMOVE) {
 await stopEverything()
 build()
 installCommands()
-if (CLAUDE) installClaudeHooks()
+if (CLAUDE) {
+  installClaudeHooks()
+  installMcpServer()
+}
 
 let started
 if (AUTOSTART && installAutostart() === 'service') {
