@@ -4,7 +4,7 @@ import { useNotes, type Note } from '../composables/useNotes'
 import { canResume, resumeCommand } from '../utils/resume'
 
 // projectLabel: shown before the title when the card is listed outside its tab (search results).
-const props = defineProps<{ note: Note; unread: boolean; projectLabel?: string | null }>()
+const props = defineProps<{ note: Note; unread: boolean; projectLabel?: string | null; selected?: boolean }>()
 const emit = defineEmits<{
   delete: [id: number]
   open: [path: string]
@@ -145,12 +145,13 @@ async function togglePin() {
   }
 }
 
-defineExpose({ togglePin })
+// Used by the keyboard shortcuts of the list.
+defineExpose({ togglePin, toggle, startEdit, copyBody })
 
 </script>
 
 <template>
-  <article class="card" :class="{ expanded, unread, pinned: note.pinned_at }">
+  <article class="card" :class="{ expanded, unread, pinned: note.pinned_at, selected }" :data-note-id="note.id">
     <header class="head" @click="toggle">
       <span class="badge" v-if="unread" title="Nouveau">●</span>
       <span v-if="projectLabel" class="project-chip">{{ projectLabel }}</span>
@@ -356,6 +357,10 @@ defineExpose({ togglePin })
   box-shadow: var(--shadow);
 }
 /* New notes: amber edge on the left, the board's "something arrived" colour. */
+.card.selected {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
 .card.pinned {
   box-shadow: inset 3px 0 0 var(--primary);
 }

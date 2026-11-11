@@ -160,6 +160,11 @@ d'abord `$OutputEncoding = [Text.UTF8Encoding]::new()`.
 - **Annuler une suppression** : une note supprimée, ou un onglet vidé avec « Tout effacer », peut être récupéré avec le
   bouton « Annuler » qui s'affiche quelques secondes en bas de l'écran. Les notes supprimées restent 7 jours dans une
   corbeille avant d'être effacées pour de bon.
+- **Exporter** : télécharge les notes de l'onglet dans un fichier markdown (épinglées en premier).
+- **Notifications** (cloche en haut à droite) : une alerte du bureau quand une note arrive alors que le board n'est
+  pas affiché.
+- **Raccourcis clavier** (`?` pour la liste) : `/` rechercher, `j` / `k` note suivante / précédente, `Entrée` déplier,
+  `e` modifier, `p` épingler, `c` copier, `Suppr` supprimer, `h` / `l` onglet précédent / suivant, `Échap` fermer.
 - En haut à droite : taille du texte (compact, normal, grand) et thème (système, clair, sombre), mémorisés dans le
   navigateur.
 

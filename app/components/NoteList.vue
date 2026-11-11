@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useNotes, type Note } from '../composables/useNotes'
 import { useSSE } from '../composables/useSSE'
+import { useNotifications } from '../composables/useNotifications'
+import { exportFileName, notesToMarkdown } from '../utils/export'
 
 const { list, remove, clear, restore, open, reveal } = useNotes()
 
@@ -18,6 +20,7 @@ const unreadIds = ref<Set<number>>(new Set())
 const loading = ref(true)
 const error = ref<string | null>(null)
 const confirmClear = ref(false)
+const { notify } = useNotifications()
 const undo = ref<{ message: string; ids: number[] } | null>(null)
 let undoTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -99,6 +102,7 @@ const sse = useSSE({
   onCreated: (note) => {
     allNotes.value = [note, ...allNotes.value.filter((n) => n.id !== note.id)]
     ensureActiveTab()
+    notify(note)
     if (document.hidden || tabOf(note) !== activeTab.value) {
       setUnread(new Set([...unreadIds.value, note.id]))
     }
@@ -223,6 +227,130 @@ async function onReveal(path: string) {
   }
 }
 
+// ── Export ──────────────────────────────────────────────────────────────
+
+function exportTab() {
+  const markdown = notesToMarkdown(activeLabel.value, tabNotes.value)
+  const url = URL.createObjectURL(new Blob([markdown], { type: 'text/markdown;charset=utf-8' }))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = exportFileName(activeLabel.value)
+  link.click()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+// ── Keyboard ────────────────────────────────────────────────────────────
+
+interface CardApi {
+  toggle: () => void
+  startEdit: () => void
+  togglePin: () => void
+  copyBody: () => void
+}
+
+const searchBar = ref<{ focus: () => void } | null>(null)
+const selectedId = ref<number | null>(null)
+const showHelp = ref(false)
+const cards = new Map<number, CardApi>()
+const visibleNotes = computed(() => [...pinnedNotes.value, ...otherNotes.value])
+
+function setCardRef(id: number, card: unknown) {
+  if (card) cards.set(id, card as CardApi)
+  else cards.delete(id)
+}
+
+function isTyping(target: EventTarget | null): boolean {
+  const el = target as HTMLElement | null
+  return Boolean(el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable))
+}
+
+function moveSelection(step: number) {
+  const list = visibleNotes.value
+  if (list.length === 0) return
+  const index = list.findIndex((note) => note.id === selectedId.value)
+  const next = index === -1 ? (step > 0 ? 0 : list.length - 1) : Math.min(list.length - 1, Math.max(0, index + step))
+  selectedId.value = list[next]!.id
+  nextTick(() => document.querySelector(`[data-note-id="${selectedId.value}"]`)?.scrollIntoView({ block: 'nearest' }))
+}
+
+function switchTab(step: number) {
+  const keys = tabs.value.map((tab) => tab.key)
+  if (keys.length === 0) return
+  const index = keys.indexOf(activeTab.value ?? '')
+  selectTab(keys[(index + step + keys.length) % keys.length]!)
+  selectedId.value = null
+}
+
+function deleteSelected() {
+  const id = selectedId.value
+  if (id === null) return
+  moveSelection(1)
+  if (selectedId.value === id) moveSelection(-1)
+  if (selectedId.value === id) selectedId.value = null
+  onDelete(id)
+}
+
+function onKeydown(e: KeyboardEvent) {
+  if (e.ctrlKey || e.metaKey || e.altKey) return
+  const target = e.target as HTMLElement | null
+
+  if (e.key === 'Escape') {
+    if (showHelp.value) showHelp.value = false
+    else if (target?.closest('.search')) {
+      query.value = ''
+      target.blur()
+    } else if (!isTyping(target)) selectedId.value = null
+    return
+  }
+  if (isTyping(target)) return
+  if (showHelp.value && e.key !== '?') return
+  // Enter on a focused button or link keeps its own meaning.
+  if (e.key === 'Enter' && target?.closest('button, a')) return
+
+  const card = selectedId.value === null ? undefined : cards.get(selectedId.value)
+  const handled = (() => {
+    switch (e.key) {
+      case '/':
+        searchBar.value?.focus()
+        return true
+      case 'j':
+        moveSelection(1)
+        return true
+      case 'k':
+        moveSelection(-1)
+        return true
+      case 'h':
+        switchTab(-1)
+        return true
+      case 'l':
+        switchTab(1)
+        return true
+      case 'Enter':
+      case 'o':
+        card?.toggle()
+        return Boolean(card)
+      case 'e':
+        card?.startEdit()
+        return Boolean(card)
+      case 'p':
+        card?.togglePin()
+        return Boolean(card)
+      case 'c':
+        card?.copyBody()
+        return Boolean(card)
+      case 'Delete':
+        deleteSelected()
+        return true
+      case '?':
+        showHelp.value = !showHelp.value
+        return true
+      default:
+        return false
+    }
+  })()
+  if (handled) e.preventDefault()
+}
+
 function onVisibility() {
   if (!document.hidden) markActiveTabRead()
 }
@@ -232,12 +360,14 @@ onMounted(() => {
   sse.connect()
   document.addEventListener('visibilitychange', onVisibility)
   window.addEventListener('focus', markActiveTabRead)
+  window.addEventListener('keydown', onKeydown)
 })
 
 onBeforeUnmount(() => {
   sse.stop()
   document.removeEventListener('visibilitychange', onVisibility)
   window.removeEventListener('focus', markActiveTabRead)
+  window.removeEventListener('keydown', onKeydown)
 })
 </script>
 
@@ -259,17 +389,20 @@ onBeforeUnmount(() => {
         </button>
       </nav>
       <div class="settings">
+        <button type="button" class="help-btn" title="Raccourcis clavier (?)" aria-label="Raccourcis clavier" @click="showHelp = true">?</button>
+        <NotifyToggle />
         <TextSizeToggle />
         <ThemeToggle />
       </div>
     </div>
 
-    <SearchBar v-model="query" />
+    <SearchBar ref="searchBar" v-model="query" />
 
-    <div v-if="otherNotes.length > 0 && !query" class="toolbar">
-      <button v-if="!confirmClear" type="button" class="danger" @click="confirmClear = true">
-        Tout effacer
-      </button>
+    <div v-if="tabNotes.length > 0 && !query" class="toolbar">
+      <template v-if="!confirmClear">
+        <button type="button" title="Télécharger les notes de cet onglet en markdown" @click="exportTab">Exporter</button>
+        <button v-if="otherNotes.length > 0" type="button" class="danger" @click="confirmClear = true">Tout effacer</button>
+      </template>
       <template v-else>
         <span class="confirm">
           Effacer les {{ otherNotes.length }} notes de « {{ activeLabel }} »<template v-if="pinnedNotes.length > 0"> (les épinglées sont gardées)</template>&nbsp;?
@@ -304,6 +437,8 @@ onBeforeUnmount(() => {
         :note="note"
         :unread="unreadIds.has(note.id)"
         :project-label="query ? projectLabel(note) : null"
+        :selected="note.id === selectedId"
+        :ref="(card) => setCardRef(note.id, card)"
         @delete="onDelete"
         @updated="replaceNote"
         @open="onOpen"
@@ -319,12 +454,16 @@ onBeforeUnmount(() => {
         :note="note"
         :unread="unreadIds.has(note.id)"
         :project-label="query ? projectLabel(note) : null"
+        :selected="note.id === selectedId"
+        :ref="(card) => setCardRef(note.id, card)"
         @delete="onDelete"
         @updated="replaceNote"
         @open="onOpen"
         @reveal="onReveal"
       />
     </template>
+
+    <ShortcutsHelp v-if="showHelp" @close="showHelp = false" />
 
     <div v-if="undo" class="undo-bar" role="status">
       <span>{{ undo.message }}</span>
@@ -371,6 +510,17 @@ onBeforeUnmount(() => {
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+.help-btn {
+  width: 28px;
+  padding: 0;
+  border-radius: 8px;
+  background: var(--bg-elev);
+  color: var(--text-dim);
+  font-weight: 700;
+}
+.help-btn:hover {
+  color: var(--text);
 }
 .search-summary {
   margin: 0 0 0.75rem;

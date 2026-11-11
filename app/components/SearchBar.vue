@@ -5,6 +5,9 @@ const props = defineProps<{ modelValue: string }>()
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
 
 const local = ref(props.modelValue)
+const input = ref<HTMLInputElement | null>(null)
+
+defineExpose({ focus: () => input.value?.focus() })
 let timer: ReturnType<typeof setTimeout> | null = null
 
 watch(local, (v) => {
@@ -20,9 +23,10 @@ watch(() => props.modelValue, (v) => {
 <template>
   <div class="search">
     <input
+      ref="input"
       v-model="local"
       type="search"
-      placeholder="Rechercher dans toutes les notes…"
+      placeholder="Rechercher dans toutes les notes…   ( / )"
       autocomplete="off"
       spellcheck="false"
     />
