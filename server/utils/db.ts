@@ -12,9 +12,11 @@ export interface NoteRow {
   // Folder the note was written from (project root for Claude sessions), null if unknown.
   cwd: string | null
   session_id: string | null
+  // Pinned notes stay at the top of their tab and survive « Tout effacer ».
+  pinned_at: string | null
 }
 
-export const NOTE_COLUMNS = 'id, title, body, created_at, updated_at, cwd, session_id'
+export const NOTE_COLUMNS = 'id, title, body, created_at, updated_at, cwd, session_id, pinned_at'
 
 let dbInstance: Database.Database | null = null
 
@@ -64,7 +66,7 @@ export function useDb(): Database.Database {
   }
 
   const noteColumns = db.prepare(`PRAGMA table_info(notes)`).all() as { name: string }[]
-  for (const column of ['updated_at', 'cwd', 'session_id']) {
+  for (const column of ['updated_at', 'cwd', 'session_id', 'pinned_at']) {
     if (!noteColumns.some((existing) => existing.name === column)) {
       db.exec(`ALTER TABLE notes ADD COLUMN ${column} TEXT`)
     }

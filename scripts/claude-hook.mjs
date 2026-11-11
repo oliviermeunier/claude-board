@@ -12,7 +12,7 @@ import { notesFromTranscript } from './lib/transcript.mjs'
 
 const BATCH = 100
 
-const INSTRUCTIONS = `Board de notes local actif (${BOARD_URL}). Pour envoyer une note à l'utilisateur, écris dans ta réponse un bloc qui commence par une ligne <note> et finit par une ligne </note> : la première ligne est le titre, la suite est du markdown. Le bloc reste visible dans le terminal et arrive sur le board à la fin de ta réponse. Fais-le quand l'utilisateur te demande une note, ou pour un contenu qu'il voudra relire ou copier plus tard (commandes, extrait de code, récapitulatif). N'écris jamais ces balises en début de ligne pour un autre usage.`
+const INSTRUCTIONS = `Board de notes local actif (${BOARD_URL}). Pour envoyer une note à l'utilisateur, écris dans ta réponse un bloc qui commence par une ligne <note> et finit par une ligne </note> : la première ligne est le titre, la suite est du markdown. Écris <note pin> au lieu de <note> pour épingler une note de référence durable. Le bloc reste visible dans le terminal et arrive sur le board à la fin de ta réponse. Fais-le quand l'utilisateur te demande une note, ou pour un contenu qu'il voudra relire ou copier plus tard (commandes, extrait de code, récapitulatif). N'écris jamais ces balises en début de ligne pour un autre usage.`
 
 function readStdin() {
   try {

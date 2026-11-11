@@ -14,12 +14,19 @@ export interface NoteInput {
   files: string[]
   cwd: string | null
   session_id: string | null
+  pinned: boolean
+}
+
+export interface CapturedNote {
+  title: string | null
+  body: string
+  pinned: boolean
 }
 
 export interface CaptureInput {
   cwd: string | null
   session_id: string | null
-  notes: { title: string | null; body: string }[]
+  notes: CapturedNote[]
 }
 
 export class ValidationError extends Error {
@@ -28,7 +35,7 @@ export class ValidationError extends Error {
   }
 }
 
-export type NotePatch = Partial<Pick<NoteInput, 'title' | 'body' | 'files'>>
+export type NotePatch = Partial<Pick<NoteInput, 'title' | 'body' | 'files' | 'pinned'>>
 
 function asObject(raw: unknown): Record<string, unknown> {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
@@ -92,6 +99,14 @@ function parseSessionId(value: unknown): string | null {
   return value
 }
 
+function parsePinned(value: unknown): boolean {
+  if (value == null) return false
+  if (typeof value !== 'boolean') {
+    throw new ValidationError('pinned', 'pinned must be a boolean')
+  }
+  return value
+}
+
 function filesArray(value: unknown): unknown[] {
   if (!Array.isArray(value)) {
     throw new ValidationError('files', 'files must be an array of strings')
@@ -112,6 +127,7 @@ export function validateNoteInput(raw: unknown): NoteInput {
     files: parseFiles(rawFiles),
     cwd: parseCwd(r.cwd),
     session_id: parseSessionId(r.session_id),
+    pinned: parsePinned(r.pinned),
   }
 }
 
@@ -126,7 +142,7 @@ export function validateCapture(raw: unknown): CaptureInput {
   }
   const notes = r.notes.map((note) => {
     const n = asObject(note)
-    return { title: parseTitle(n.title), body: parseBody(n.body) }
+    return { title: parseTitle(n.title), body: parseBody(n.body), pinned: parsePinned(n.pinned) }
   })
   return { cwd: parseCwd(r.cwd), session_id: parseSessionId(r.session_id), notes }
 }
@@ -139,9 +155,13 @@ export function validateNotePatch(raw: unknown): NotePatch {
   if ('title' in r) patch.title = parseTitle(r.title)
   if ('body' in r) patch.body = parseBody(r.body)
   if ('files' in r) patch.files = parseFiles(filesArray(r.files))
+  if ('pinned' in r) {
+    if (typeof r.pinned !== 'boolean') throw new ValidationError('pinned', 'pinned must be a boolean')
+    patch.pinned = r.pinned
+  }
 
   if (Object.keys(patch).length === 0) {
-    throw new ValidationError('body', 'at least one of title, body, files is required')
+    throw new ValidationError('body', 'at least one of title, body, files, pinned is required')
   }
   return patch
 }

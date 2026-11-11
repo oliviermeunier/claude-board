@@ -3,17 +3,26 @@ import assert from 'node:assert/strict'
 import { extractNotes, notesFromTranscript } from '../scripts/lib/transcript.mjs'
 import { addBoardHooks, removeBoardHooks } from '../scripts/lib/claude-settings.mjs'
 
+const note = (title: string | null, body: string, pinned = false) => ({ title, body, pinned })
+
 test('extractNotes : titre sur la première ligne, markdown ensuite', () => {
   const text = 'Voici la note :\n<note>\n## Commandes utiles\n\n- `npm test`\n</note>\nFin.'
-  assert.deepEqual(extractNotes(text), [{ title: 'Commandes utiles', body: '- `npm test`' }])
+  assert.deepEqual(extractNotes(text), [note('Commandes utiles', '- `npm test`')])
 })
 
 test('extractNotes : balise sur la même ligne que le titre', () => {
-  assert.deepEqual(extractNotes('<note>Titre\ncorps</note>'), [{ title: 'Titre', body: 'corps' }])
+  assert.deepEqual(extractNotes('<note>Titre\ncorps</note>'), [note('Titre', 'corps')])
 })
 
 test('extractNotes : une seule ligne devient une note sans titre', () => {
-  assert.deepEqual(extractNotes('<note>Penser au backup</note>'), [{ title: null, body: 'Penser au backup' }])
+  assert.deepEqual(extractNotes('<note>Penser au backup</note>'), [note(null, 'Penser au backup')])
+})
+
+test('extractNotes : <note pin> crée une note épinglée', () => {
+  assert.deepEqual(extractNotes('<note pin>\nRéférence\ncontenu durable\n</note>'), [
+    note('Référence', 'contenu durable', true),
+  ])
+  assert.deepEqual(extractNotes('<note pin>Une ligne</note>'), [note(null, 'Une ligne', true)])
 })
 
 test('extractNotes : ignore une mention au milieu d\'une phrase', () => {
@@ -29,12 +38,12 @@ test('extractNotes : ignore un exemple dans un bloc de code', () => {
 test('extractNotes : garde les blocs de code à l\'intérieur de la note', () => {
   const text = '<note>\nScript\n```bash\necho "</note> pas ici"\n```\n</note>'
   // La ligne « echo » ne finit pas par </note> : elle reste dans le corps.
-  assert.deepEqual(extractNotes(text), [{ title: 'Script', body: '```bash\necho "</note> pas ici"\n```' }])
+  assert.deepEqual(extractNotes(text), [note('Script', '```bash\necho "</note> pas ici"\n```')])
 })
 
 test('extractNotes : plusieurs notes, une note vide ignorée', () => {
-  const text = '<note>\nA\na\n</note>\n<note>\n</note>\n<note>\nB\nb\n</note>'
-  assert.deepEqual(extractNotes(text).map((n) => n.title), ['A', 'B'])
+  const text = '<note>\nA\na\n</note>\n<note>\n</note>\n<note pin>\nB\nb\n</note>'
+  assert.deepEqual(extractNotes(text), [note('A', 'a'), note('B', 'b', true)])
 })
 
 test('notesFromTranscript : ne lit que les messages de Claude', () => {
@@ -45,7 +54,7 @@ test('notesFromTranscript : ne lit que les messages de Claude', () => {
     'pas du json',
   ]
   const jsonl = lines.map((l) => (typeof l === 'string' ? l : JSON.stringify(l))).join('\n')
-  assert.deepEqual(notesFromTranscript(jsonl), [{ title: 'De Claude', body: 'y' }])
+  assert.deepEqual(notesFromTranscript(jsonl), [note('De Claude', 'y')])
 })
 
 test('addBoardHooks : ajoute SessionStart et Stop sans toucher aux autres hooks, sans doublon', () => {

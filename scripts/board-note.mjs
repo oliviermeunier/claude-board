@@ -16,6 +16,8 @@
 //   board-note --edit 42 <<'EOF'            (remplace le corps de la note #42)
 //   board-note --edit 42 "Nouveau titre"    (remplace le titre)
 //   board-note --edit 42 --file plan.md     (remplace les fichiers joints)
+//   board-note --pin "Titre" <<< "body"     (note épinglée : en haut de l'onglet, épargnée par « Tout effacer »)
+//   board-note --edit 42 --pin              (épingle la note #42 ; --unpin la désépingle)
 //   Avec --edit, seul ce qui est fourni est modifié ; le reste est conservé.
 //
 // Variables d'env :
@@ -46,7 +48,7 @@ function printHelp() {
 }
 
 function parseArgs(argv) {
-  const args = { title: '', files: [], editId: '' }
+  const args = { title: '', files: [], editId: '', pinned: undefined }
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]
     const next = () => {
@@ -57,6 +59,8 @@ function parseArgs(argv) {
     else if (arg.startsWith('--file=')) args.files.push(resolve(arg.slice('--file='.length)))
     else if (arg === '--edit') args.editId = next()
     else if (arg.startsWith('--edit=')) args.editId = arg.slice('--edit='.length)
+    else if (arg === '--pin') args.pinned = true
+    else if (arg === '--unpin') args.pinned = false
     else if (arg === '-h' || arg === '--help') {
       printHelp()
       process.exit(0)
@@ -90,19 +94,22 @@ function readStdin() {
   })
 }
 
-const { title, files, editId } = parseArgs(process.argv.slice(2))
+const { title, files, editId, pinned } = parseArgs(process.argv.slice(2))
 // Comme $(cat) en bash : les retours à la ligne finaux sont retirés.
 const body = (await readStdin()).replace(/(\r?\n)+$/, '')
 
 let method, url, payload, expected, doneLabel
 if (editId) {
   if (!/^[1-9][0-9]*$/.test(editId)) fail('--edit attend un numéro de note', 2)
-  if (!title && !body && files.length === 0) fail('rien à modifier (ni titre, ni stdin, ni --file)', 2)
+  if (!title && !body && files.length === 0 && pinned === undefined) {
+    fail('rien à modifier (ni titre, ni stdin, ni --file, ni --pin/--unpin)', 2)
+  }
   // Seuls les champs fournis partent dans le PATCH.
   payload = {}
   if (title) payload.title = title
   if (body) payload.body = body
   if (files.length > 0) payload.files = files
+  if (pinned !== undefined) payload.pinned = pinned
   method = 'PATCH'
   url = `${BOARD_URL}/api/notes/${editId}`
   expected = 200
@@ -111,7 +118,7 @@ if (editId) {
   // Sans body sur stdin, le body par défaut liste les fichiers joints.
   const finalBody = body || files.map((f) => `- \`${basename(f)}\``).join('\n')
   if (!finalBody) fail('body vide (ni stdin ni --file)', 2)
-  payload = { title: title || null, body: finalBody, files, cwd: projectRoot(process.cwd()) }
+  payload = { title: title || null, body: finalBody, files, cwd: projectRoot(process.cwd()), pinned: pinned === true }
   method = 'POST'
   url = `${BOARD_URL}/api/notes`
   expected = 201

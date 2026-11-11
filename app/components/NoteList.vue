@@ -35,6 +35,9 @@ const tabs = computed(() => {
 
 const tabNotes = computed(() => allNotes.value.filter((note) => tabOf(note) === activeTab.value))
 const notes = computed(() => (query.value ? tabNotes.value.filter((note) => matchesQuery(note, query.value)) : tabNotes.value))
+// Pinned notes are listed first, without day separators; « Tout effacer » leaves them alone.
+const pinnedNotes = computed(() => notes.value.filter((note) => note.pinned_at))
+const otherNotes = computed(() => notes.value.filter((note) => !note.pinned_at))
 const activeLabel = computed(() => tabs.value.find((tab) => tab.key === activeTab.value)?.label ?? '')
 const activeUnread = computed(() => tabNotes.value.filter((note) => unreadIds.value.has(note.id)).length)
 
@@ -102,8 +105,8 @@ const sse = useSSE({
   },
   onDeleted: (id) => dropNotes((note) => note.id !== id),
   onCleared: (project) => {
-    if (project === undefined) dropNotes(() => false)
-    else dropNotes((note) => note.project !== project)
+    if (project === undefined) dropNotes((note) => Boolean(note.pinned_at))
+    else dropNotes((note) => note.project !== project || Boolean(note.pinned_at))
   },
 })
 
@@ -152,7 +155,7 @@ async function onClear() {
   const project = activeTab.value === OTHERS ? null : activeTab.value
   try {
     await clear(project)
-    dropNotes((note) => note.project !== project)
+    dropNotes((note) => note.project !== project || Boolean(note.pinned_at))
   } catch (e) {
     error.value = `Erreur effacement: ${(e as Error).message}`
   }
@@ -217,12 +220,14 @@ onBeforeUnmount(() => {
 
     <SearchBar v-model="query" />
 
-    <div v-if="notes.length > 0 && !query" class="toolbar">
+    <div v-if="otherNotes.length > 0 && !query" class="toolbar">
       <button v-if="!confirmClear" type="button" class="danger" @click="confirmClear = true">
         Tout effacer
       </button>
       <template v-else>
-        <span class="confirm">Effacer les {{ notes.length }} notes de « {{ activeLabel }} »&nbsp;?</span>
+        <span class="confirm">
+          Effacer les {{ otherNotes.length }} notes de « {{ activeLabel }} »<template v-if="pinnedNotes.length > 0"> (les épinglées sont gardées)</template>&nbsp;?
+        </span>
         <button type="button" class="danger" @click="onClear">Oui</button>
         <button type="button" @click="confirmClear = false">Non</button>
       </template>
@@ -242,8 +247,22 @@ onBeforeUnmount(() => {
     </div>
     <p v-else-if="notes.length === 0" class="dim empty">Aucun résultat pour « {{ query }} ».</p>
 
-    <template v-for="(note, index) in notes" :key="note.id">
-      <div v-if="index === 0 || dayKey(note) !== dayKey(notes[index - 1]!)" class="day-separator">
+    <template v-if="pinnedNotes.length > 0">
+      <div class="day-separator pinned-separator"><span>Épinglées</span></div>
+      <NoteCard
+        v-for="note in pinnedNotes"
+        :key="note.id"
+        :note="note"
+        :unread="unreadIds.has(note.id)"
+        @delete="onDelete"
+        @updated="replaceNote"
+        @open="onOpen"
+        @reveal="onReveal"
+      />
+    </template>
+
+    <template v-for="(note, index) in otherNotes" :key="note.id">
+      <div v-if="index === 0 || dayKey(note) !== dayKey(otherNotes[index - 1]!)" class="day-separator">
         <span>{{ dayLabel(note) }}</span>
       </div>
       <NoteCard
@@ -270,6 +289,9 @@ onBeforeUnmount(() => {
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+.pinned-separator {
+  color: var(--primary);
 }
 .day-separator::before,
 .day-separator::after {

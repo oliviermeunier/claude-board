@@ -50,7 +50,8 @@ Un halo sarcelle très léger (`--glow`) éclaire le haut de la page.
 - Rayon : 12 px pour les cartes et le champ de recherche, 8 px pour les boutons, pilule pour les pastilles et les
   fichiers joints.
 - Ombre seulement sur une note dépliée.
-- Une note non lue porte un liseré ambre de 3 px à gauche.
+- Une note non lue porte un liseré ambre de 3 px à gauche ; une note épinglée, un liseré sarcelle (l'ambre l'emporte tant
+  qu'elle n'est pas lue). La section « Épinglées » a son intitulé en sarcelle.
 
 ## Logo
 

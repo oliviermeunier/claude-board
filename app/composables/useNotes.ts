@@ -8,6 +8,7 @@ export interface Note {
   project: string | null
   cwd: string | null
   session_id: string | null
+  pinned_at: string | null
 }
 
 export interface NewNote {
@@ -21,6 +22,7 @@ export interface NotePatch {
   title?: string | null
   body?: string
   files?: string[]
+  pinned?: boolean
 }
 
 export function useNotes() {

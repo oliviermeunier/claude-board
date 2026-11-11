@@ -365,3 +365,45 @@ test('POST /api/capture refuse un payload invalide', async () => {
   assert.equal((await capture({ notes: 'x' })).status, 400)
   assert.equal((await capture({ notes: [{ title: 't', body: '' }] })).status, 400)
 })
+
+test('épingler : PATCH pinned ne marque pas la note comme modifiée', async () => {
+  const created = await (await post({ body: 'à épingler' })).json()
+  assert.equal(created.pinned_at, null)
+
+  const pinned = await (await patch(created.id, { pinned: true })).json()
+  assert.ok(pinned.pinned_at)
+  assert.equal(pinned.updated_at, null)
+
+  // Ré-épingler garde la date d'épinglage d'origine.
+  const again = await (await patch(created.id, { pinned: true })).json()
+  assert.equal(again.pinned_at, pinned.pinned_at)
+
+  const unpinned = await (await patch(created.id, { pinned: false })).json()
+  assert.equal(unpinned.pinned_at, null)
+
+  assert.equal((await patch(created.id, { pinned: 'oui' })).status, 400)
+})
+
+test('épingler : « Tout effacer » garde les notes épinglées', async () => {
+  await fetch(`${BASE}/api/notes`, { method: 'DELETE' })
+  for (const n of (await (await fetch(`${BASE}/api/notes`)).json()) as { id: number }[]) {
+    await fetch(`${BASE}/api/notes/${n.id}`, { method: 'DELETE' })
+  }
+  await post({ body: 'épinglée', pinned: true, cwd: join(tmpDir, 'garde') })
+  await post({ body: 'ordinaire', cwd: join(tmpDir, 'garde') })
+  await post({ body: 'ailleurs' })
+
+  await fetch(`${BASE}/api/notes?project=garde`, { method: 'DELETE' })
+  let bodies = (await (await fetch(`${BASE}/api/notes`)).json()).map((n: { body: string }) => n.body).sort()
+  assert.deepEqual(bodies, ['ailleurs', 'épinglée'])
+
+  await fetch(`${BASE}/api/notes`, { method: 'DELETE' })
+  bodies = (await (await fetch(`${BASE}/api/notes`)).json()).map((n: { body: string }) => n.body)
+  assert.deepEqual(bodies, ['épinglée'])
+})
+
+test('épingler : une note capturée avec <note pin> arrive épinglée', async () => {
+  const res = await (await capture({ notes: [{ title: 'Réf', body: 'épinglée par Claude', pinned: true }] })).json()
+  const list = await (await fetch(`${BASE}/api/notes`)).json()
+  assert.ok(list.find((n: { id: number }) => n.id === res.created[0]).pinned_at)
+})

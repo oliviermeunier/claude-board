@@ -7,12 +7,13 @@ import type { CaptureInput, NoteInput } from './validate'
 export function createNote(input: NoteInput): Note {
   const db = useDb()
   const insertNote = db.prepare(
-    `INSERT INTO notes (title, body, created_at, cwd, session_id) VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO notes (title, body, created_at, cwd, session_id, pinned_at) VALUES (?, ?, ?, ?, ?, ?)`,
   )
   const insertFile = db.prepare(`INSERT INTO attachments (note_id, position, path) VALUES (?, ?, ?)`)
 
+  const now = new Date().toISOString()
   const id = db.transaction(() => {
-    const noteId = insertNote.run(input.title, input.body, new Date().toISOString(), input.cwd, input.session_id)
+    const noteId = insertNote.run(input.title, input.body, now, input.cwd, input.session_id, input.pinned ? now : null)
       .lastInsertRowid
     input.files.forEach((path, position) => insertFile.run(noteId, position, path))
     return noteId
@@ -25,7 +26,7 @@ export function createNote(input: NoteInput): Note {
 }
 
 // Same title and body = same note, whatever the session: a resumed or forked session
-// replays its transcript, and its notes must not show up twice.
+// replays its transcript, and its notes must not show up twice. Pinning does not change the note.
 export function captureSignature(note: { title: string | null; body: string }): string {
   return createHash('sha256').update(`${note.title ?? ''}\x1f${note.body}`).digest('hex')
 }

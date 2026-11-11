@@ -110,6 +110,7 @@ Corps en **markdown**, blocs de code compris.
 - `<note>` doit commencer une ligne et `</note>` en finir une : une mention dans une phrase est ignorée, comme un
   exemple placé dans un bloc de code ;
 - la première ligne est le titre ; une note d'une seule ligne n'a pas de titre ;
+- `<note pin>` au lieu de `<note>` crée une note épinglée ;
 - le hook relit tout le transcript à chaque fois, donc une note manquée (serveur arrêté) est rattrapée à la réponse
   suivante. Une note déjà reçue n'est jamais recréée, même si tu l'as supprimée entre-temps.
 
@@ -130,6 +131,10 @@ board-note --file plan.md --file plan.pdf "Plan v2" <<< "## Ce qui change"
 board-note --edit 42 <<< "## Nouveau corps"
 board-note --edit 42 "Nouveau titre"
 board-note --edit 42 --file plan-v2.md
+
+# épingler : à la création, ou après coup (--unpin pour désépingler)
+board-note --pin "Commandes de déploiement" <<< "..."
+board-note --edit 42 --pin
 ```
 
 Windows : depuis PowerShell 5.1, un pipe vers une commande externe perd les accents ; utiliser Git Bash ou lancer
@@ -143,6 +148,8 @@ d'abord `$OutputEncoding = [Text.UTF8Encoding]::new()`.
      `~/code/mon-app/src` va dans « mon-app »), ou le premier dossier sous `BOARD_DOCS_ROOT` ;
   3. sinon « Autres » (note envoyée depuis le dossier personnel, par exemple).
 - À l'ouverture, l'onglet affiché est celui de la note la plus récente ; une note arrivée ailleurs y pose une pastille.
+- **Épingler** (punaise au survol de l'en-tête) : la note passe en haut de son onglet, avec un liseré sarcelle, et
+  « Tout effacer » ne la touche pas.
 - Recherche dans l'onglet courant (titre et contenu). « Tout effacer » ne vide que l'onglet courant.
 - Cliquer une note pour la déplier. Au survol de l'en-tête : modifier (Ctrl+Entrée enregistre, Échap annule), copier
   le markdown, supprimer (deux clics). Chaque bloc de code a son bouton copier.
@@ -174,19 +181,19 @@ Variables d'environnement (à définir avant `npm run setup` pour le service) :
 | Verbe | Route | Description |
 |---|---|---|
 | GET | `/api/notes?q=…` | Liste anté-chrono, filtre optionnel |
-| POST | `/api/notes` | `{title?, body, files?: string[], cwd?, session_id?}` → crée (`file_path` seul encore accepté) |
-| POST | `/api/capture` | `{cwd?, session_id?, notes: [{title?, body}]}` → crée les notes jamais reçues (utilisé par le hook) |
-| PATCH | `/api/notes/:id` | `{title?, body?, files?}` → modifie seulement les champs envoyés (`title: null` efface le titre) |
+| POST | `/api/notes` | `{title?, body, files?: string[], cwd?, session_id?, pinned?}` → crée (`file_path` seul encore accepté) |
+| POST | `/api/capture` | `{cwd?, session_id?, notes: [{title?, body, pinned?}]}` → crée les notes jamais reçues (utilisé par le hook) |
+| PATCH | `/api/notes/:id` | `{title?, body?, files?, pinned?}` → modifie seulement les champs envoyés (`title: null` efface le titre ; épingler ne marque pas la note « modifiée ») |
 | GET | `/api/notes/:id/files/:index` | Télécharge le n-ième fichier joint |
 | DELETE | `/api/notes/:id` | Supprime |
-| DELETE | `/api/notes` | Supprime toutes les notes |
-| DELETE | `/api/notes?project=X` | Supprime les notes du projet `X` (`project=` vide : notes sans projet) |
+| DELETE | `/api/notes` | Supprime toutes les notes non épinglées |
+| DELETE | `/api/notes?project=X` | Supprime les notes non épinglées du projet `X` (`project=` vide : notes sans projet) |
 | GET | `/api/stream` | SSE : `note.created`, `note.updated`, `note.deleted`, `note.cleared` (`project` si effacement ciblé) |
 | POST | `/api/open` | `{path}` → ouvre le fichier (xdg-open, open, explorer.exe ; limité au dossier personnel) |
 | POST | `/api/reveal` | `{path}` → montre le fichier dans le gestionnaire de fichiers (dossier parent sous Linux) |
 
 Chaque note renvoyée porte `files` (chemins joints, dans l'ordre), `project` (`null` hors projet), `cwd`,
-`session_id` et `updated_at` (`null` si jamais modifiée).
+`session_id`, `pinned_at` (`null` si pas épinglée) et `updated_at` (`null` si jamais modifiée).
 
 ## Développement
 

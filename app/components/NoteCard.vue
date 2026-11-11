@@ -134,11 +134,25 @@ async function saveEdit() {
   }
 }
 
+const pinning = ref(false)
+
+async function togglePin() {
+  if (pinning.value) return
+  pinning.value = true
+  try {
+    emit('updated', await update(props.note.id, { pinned: !props.note.pinned_at }))
+  } finally {
+    pinning.value = false
+  }
+}
+
+defineExpose({ togglePin })
+
 onBeforeUnmount(disarm)
 </script>
 
 <template>
-  <article class="card" :class="{ expanded, unread }" @mouseleave="disarm">
+  <article class="card" :class="{ expanded, unread, pinned: note.pinned_at }" @mouseleave="disarm">
     <header class="head" @click="toggle">
       <span class="badge" v-if="unread" title="Nouveau">●</span>
       <span class="headline">{{ headline }}</span>
@@ -158,6 +172,26 @@ onBeforeUnmount(disarm)
       <span class="date" :title="absoluteDate">
         {{ relativeDate }}<span v-if="note.updated_at" class="edited"> · modifiée</span>
       </span>
+      <button
+        type="button"
+        class="pin-btn"
+        :class="{ active: note.pinned_at }"
+        :title="note.pinned_at ? 'Désépingler' : 'Épingler : en haut de l’onglet, épargnée par « Tout effacer »'"
+        :aria-label="note.pinned_at ? 'Désépingler la note' : 'Épingler la note'"
+        :aria-pressed="Boolean(note.pinned_at)"
+        @click.stop="togglePin"
+      >
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+          <path
+            d="M9.8 1.9 14.1 6.2 11.6 7.4 9.3 9.7 9.6 12.6 8.3 13.9 5.7 11.3 2.4 14.6 M5.7 11.3 2.1 7.7 3.4 6.4 6.3 6.7 8.6 4.4Z"
+            :fill="note.pinned_at ? 'currentColor' : 'none'"
+            stroke="currentColor"
+            stroke-width="1.3"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </button>
       <button
         type="button"
         class="edit-btn"
@@ -312,6 +346,33 @@ onBeforeUnmount(disarm)
   box-shadow: var(--shadow);
 }
 /* New notes: amber edge on the left, the board's "something arrived" colour. */
+.card.pinned {
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+.card.pinned.expanded {
+  box-shadow: inset 3px 0 0 var(--primary), var(--shadow);
+}
+.pin-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 5px;
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-dim);
+  opacity: 0;
+}
+.head:hover .pin-btn,
+.pin-btn:focus-visible,
+.pin-btn.active {
+  opacity: 1;
+}
+.pin-btn:hover {
+  color: var(--text);
+  background: var(--bg-elev-2);
+}
+.pin-btn.active {
+  color: var(--primary);
+}
 .card.unread {
   border-color: var(--highlight-border);
   box-shadow: inset 3px 0 0 var(--highlight);

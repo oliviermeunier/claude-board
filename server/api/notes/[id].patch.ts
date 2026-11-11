@@ -26,11 +26,16 @@ export default defineEventHandler(async (event): Promise<Note> => {
     throw createError({ statusCode: 404, statusMessage: 'Note not found' })
   }
 
+  // Pinning is not an edit: only a change of title, body or files marks the note as « modifiée ».
+  const edited = patch.title !== undefined || patch.body !== undefined || patch.files !== undefined
+  const now = new Date().toISOString()
+
   db.transaction(() => {
-    db.prepare(`UPDATE notes SET title = ?, body = ?, updated_at = ? WHERE id = ?`).run(
+    db.prepare(`UPDATE notes SET title = ?, body = ?, updated_at = ?, pinned_at = ? WHERE id = ?`).run(
       patch.title !== undefined ? patch.title : current.title,
       patch.body ?? current.body,
-      new Date().toISOString(),
+      edited ? now : current.updated_at,
+      patch.pinned === undefined ? current.pinned_at : patch.pinned ? (current.pinned_at ?? now) : null,
       id,
     )
     if (patch.files) {
