@@ -166,6 +166,8 @@ d'abord `$OutputEncoding = [Text.UTF8Encoding]::new()`.
   indiqué devant son titre. « Tout effacer » ne vide que l'onglet courant.
 - Cliquer une note pour la déplier. Au survol de l'en-tête : modifier (Ctrl+Entrée enregistre, Échap annule), copier
   le markdown, supprimer. Chaque bloc de code a son bouton copier.
+- **Cases à cocher** : les listes `- [ ] à faire` d'une note deviennent des cases cliquables ; cocher met à jour le
+  markdown de la note.
 - **Reprendre la session** : une note venue de Claude Code affiche, dépliée, le dossier de la session et un bouton qui
   copie la commande pour rouvrir cette conversation (`cd <dossier> && claude --resume <session>`), à coller dans un
   terminal.
