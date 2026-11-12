@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
-import { renderMarkdown } from '../composables/useMarkdown'
+import { renderMarkdown, toggleTask } from '../composables/useMarkdown'
+import { useNotes } from '../composables/useNotes'
 
-const props = defineProps<{ source: string }>()
+const props = defineProps<{ source: string; noteId: number }>()
+const { update } = useNotes()
+const taskError = ref<string | null>(null)
+let taskErrorTimer: ReturnType<typeof setTimeout> | null = null
 
 const html = ref('<p class="dim">Rendu…</p>')
 const root = ref<HTMLElement | null>(null)
@@ -47,8 +51,34 @@ function onClick(e: MouseEvent) {
   })
 }
 
+function showTaskError(message: string) {
+  taskError.value = message
+  if (taskErrorTimer) clearTimeout(taskErrorTimer)
+  taskErrorTimer = setTimeout(() => { taskError.value = null }, 4000)
+}
+
+async function onChange(e: Event) {
+  const box = e.target as HTMLInputElement | null
+  if (!box?.classList.contains('task-checkbox')) return
+  const next = toggleTask(props.source, Number(box.dataset.line))
+  if (next === props.source) {
+    box.checked = !box.checked
+    return
+  }
+  box.disabled = true
+  try {
+    await update(props.noteId, { body: next })
+  } catch {
+    box.checked = !box.checked
+    showTaskError('Impossible d\'enregistrer la case.')
+  } finally {
+    box.disabled = false
+  }
+}
+
 onMounted(() => {
   root.value?.addEventListener('click', onClick)
+  root.value?.addEventListener('change', onChange)
   resizeObserver = new ResizeObserver(measure)
   observeContent()
 })
@@ -59,6 +89,8 @@ watch(html, () => requestAnimationFrame(() => {
 }))
 onBeforeUnmount(() => {
   root.value?.removeEventListener('click', onClick)
+  root.value?.removeEventListener('change', onChange)
+  if (taskErrorTimer) clearTimeout(taskErrorTimer)
   resizeObserver?.disconnect()
 })
 </script>
@@ -71,6 +103,7 @@ onBeforeUnmount(() => {
       :class="{ clamped: !showAll, faded: !showAll && overflowing }"
       v-html="html"
     />
+    <p v-if="taskError" class="task-error" role="alert">{{ taskError }}</p>
     <button v-if="overflowing || showAll" type="button" class="see-more" @click="showAll = !showAll">
       {{ showAll ? 'Voir moins' : 'Voir plus' }}
     </button>
@@ -171,5 +204,21 @@ onBeforeUnmount(() => {
   color: var(--text-dim);
   margin: 0.6em 0;
 }
+.note-body li.task-item { list-style: none; margin-left: -1.5em; }
+.note-body .task-checkbox {
+  width: 1em;
+  height: 1em;
+  margin: 0 0.45em 0 0;
+  vertical-align: -0.12em;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+.note-body .task-checkbox:disabled { cursor: progress; }
+.note-body li.task-item:has(.task-checkbox:checked) { color: var(--text-dim); text-decoration: line-through; }
 .note-body .dim { color: var(--text-dim); }
+.note-body-wrap .task-error {
+  margin: 6px 0 0;
+  font-size: 0.8125rem;
+  color: var(--danger);
+}
 </style>

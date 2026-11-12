@@ -7,6 +7,27 @@ const md = new MarkdownIt({
   breaks: false,
 })
 
+const TASK_PREFIX = /^\[([ xX])\] /
+
+// Un jeton html_inline fixe : le texte de la tâche reste un jeton text, donc échappé comme le reste.
+md.core.ruler.after('inline', 'task-lists', (state) => {
+  const tokens = state.tokens
+  for (let i = 0; i + 2 < tokens.length; i++) {
+    const item = tokens[i]!
+    const inline = tokens[i + 2]!
+    if (item.type !== 'list_item_open' || tokens[i + 1]!.type !== 'paragraph_open' || inline.type !== 'inline') continue
+    const first = inline.children?.[0]
+    const match = first?.type === 'text' ? TASK_PREFIX.exec(first.content) : null
+    if (!first || !match || !item.map) continue
+
+    first.content = first.content.slice(match[0].length)
+    const box = new state.Token('html_inline', '', 0)
+    box.content = `<input type="checkbox" class="task-checkbox" data-line="${item.map[0]}"${match[1] === ' ' ? '' : ' checked'}> `
+    inline.children!.unshift(box)
+    item.attrJoin('class', 'task-item')
+  }
+})
+
 // Both palettes are emitted as CSS variables; app.vue picks one from the active theme.
 const SHIKI_OPTIONS = {
   themes: { light: 'github-light', dark: 'github-dark' },
@@ -55,4 +76,20 @@ export async function renderMarkdown(source: string): Promise<string> {
     final = final.replace(r.match, r.html)
   }
   return final
+}
+
+const TASK_LINE = /^((?:\s*>)*\s*(?:[-*+]|\d+[.)])\s+)\[([ xX])\]/
+
+// Passe par l'analyse Markdown pour ne basculer qu'une vraie tâche, jamais un « [ ] » de bloc de code.
+export function toggleTask(source: string, line: number): string {
+  const isTask = md.parse(source, {}).some((t, i, all) =>
+    t.type === 'list_item_open' && t.map?.[0] === line && TASK_PREFIX.test(all[i + 2]?.content ?? ''))
+  if (!isTask) return source
+
+  const lines = source.split('\n')
+  const match = TASK_LINE.exec(lines[line] ?? '')
+  if (!match) return source
+  const marker = match[2] === ' ' ? 'x' : ' '
+  lines[line] = lines[line]!.replace(TASK_LINE, `$1[${marker}]`)
+  return lines.join('\n')
 }

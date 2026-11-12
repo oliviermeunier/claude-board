@@ -294,7 +294,7 @@ onBeforeUnmount(disarm)
           <button type="submit" class="primary" :disabled="saving">{{ saving ? 'Enregistrement…' : 'Enregistrer' }}</button>
         </div>
       </form>
-      <NoteBody v-else :source="note.body" />
+      <NoteBody v-else :source="note.body" :note-id="note.id" />
     </section>
   </article>
 </template>
