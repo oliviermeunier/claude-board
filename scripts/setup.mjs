@@ -277,11 +277,11 @@ async function stopEverything() {
 
 // ── Main ────────────────────────────────────────────────────────────────────
 
-// Nuxt 4 needs Node ^20.19.0 || >=22.12.0.
+// Nuxt 4 needs Node 22.12 within the 22 line; better-sqlite3 needs Node 22 or later.
 const [major, minor] = process.versions.node.split('.').map(Number)
-const supported = (major === 20 && minor >= 19) || (major === 22 && minor >= 12) || major > 22
+const supported = (major === 22 && minor >= 12) || major > 22
 if (!supported) {
-  console.error(`Node ${process.versions.node} : il faut Node 20.19+, 22.12+ ou plus récent (24 recommandé).`)
+  console.error(`Node ${process.versions.node} : il faut Node 22.12 ou plus récent (24 recommandé).`)
   process.exit(1)
 }
 

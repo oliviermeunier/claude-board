@@ -10,7 +10,7 @@ Merci de ton intérêt. Le projet est petit et maintenu sur du temps libre : les
 
 ## Mettre en place l'environnement
 
-Node 20.19+, 22.12+ ou plus récent (24 recommandé).
+Node 22.12 ou plus récent (24 recommandé).
 
 ```bash
 git clone https://github.com/<ton-compte>/claude-board.git

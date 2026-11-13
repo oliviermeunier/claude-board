@@ -14,7 +14,7 @@ projet.
 
 Prérequis :
 
-- [Node.js](https://nodejs.org) 20.19+, 22.12+ ou plus récent (24 recommandé, c'est la version testée) ;
+- [Node.js](https://nodejs.org) 22.12 ou plus récent (24 recommandé, c'est la version testée) ;
 - git ;
 - [Claude Code](https://claude.com/claude-code), pour la capture automatique des notes (facultatif : sans lui,
   `board-note` et l'API marchent quand même).
