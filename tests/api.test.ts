@@ -4,6 +4,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process'
+import { request } from 'node:http'
 import { fileURLToPath } from 'node:url'
 
 let server: ChildProcess
@@ -70,6 +71,26 @@ after(() => {
     else process.kill(-server.pid, 'SIGTERM')
   }
   if (tmpDir) rmSync(tmpDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 })
+})
+
+// fetch refuses to set the Host header: node:http sends it as given.
+function statusWithHost(host: string, path = '/api/notes'): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const req = request({ host: '127.0.0.1', port: PORT, path, headers: { host } }, (res) => {
+      res.resume()
+      resolve(res.statusCode ?? 0)
+    })
+    req.on('error', reject)
+    req.end()
+  })
+}
+
+test('Host : une requête au nom d\'un autre site est refusée (DNS rebinding)', async () => {
+  assert.equal(await statusWithHost('exemple.invalid'), 403)
+  assert.equal(await statusWithHost(`exemple.invalid:${PORT}`), 403)
+  assert.equal(await statusWithHost('exemple.invalid', '/'), 403)
+  assert.equal(await statusWithHost(`127.0.0.1:${PORT}`), 200)
+  assert.equal(await statusWithHost(`localhost:${PORT}`), 200)
 })
 
 test('GET /api/notes returns empty array initially', async () => {

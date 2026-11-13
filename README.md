@@ -5,7 +5,8 @@ code, plans. Les notes sont rendues en markdown avec coloration syntaxique, copi
 projet.
 
 - Linux, macOS et Windows
-- Serveur Nuxt 4 sur `http://127.0.0.1:4848` (boucle locale uniquement, pas d'authentification)
+- Serveur Nuxt 4 sur `http://127.0.0.1:4848` (boucle locale uniquement, pas d'authentification ; une requête dont
+  l'en-tête `Host` n'est pas celui du board est refusée, pour qu'un site web ne puisse pas le lire)
 - Stockage SQLite dans `~/.board/board.db`
 - Mise à jour en direct dans le navigateur (Server-Sent Events)
 
@@ -198,6 +199,7 @@ Variables d'environnement (à définir avant `npm run setup` pour le service) :
 |---|---|---|
 | `NITRO_PORT` | `4848` | port |
 | `NITRO_HOST` | `127.0.0.1` | interface d'écoute |
+| `BOARD_ALLOWED_HOSTS` | aucun | noms d'hôte acceptés en plus de `127.0.0.1`, `localhost` et `NITRO_HOST`, séparés par des virgules (utile avec `NITRO_HOST=0.0.0.0`) |
 | `BOARD_DB_PATH` | `~/.board/board.db` | base SQLite |
 | `BOARD_DOCS_ROOT` | `~/Documents/Claude` | dossier racine des projets (voir onglets) |
 | `BOARD_URL` | `http://127.0.0.1:4848` | adresse utilisée par `board-note` et les hooks |
@@ -232,6 +234,7 @@ npm test         # tests (lance son propre serveur sur 4849)
 ```
 app/                  frontend Vue 3 (components/, composables/)
 server/api/           routes Nitro
+server/middleware/    contrôle de l'en-tête Host
 server/utils/         db, validation, projets, chemins, ouverture de fichiers
 scripts/
   setup.mjs           installation multiplateforme
