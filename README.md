@@ -187,7 +187,7 @@ d'abord `$OutputEncoding = [Text.UTF8Encoding]::new()`.
 
 ```bash
 board-server status
-board-server start      # si le lancement automatique n'est pas installé
+board-server start      # démarre le service systemd s'il est installé, sinon un serveur en arrière-plan
 board-server stop
 ```
 
@@ -235,6 +235,7 @@ npm test         # tests (lance son propre serveur sur 4849)
 app/                  frontend Vue 3 (components/, composables/)
 server/api/           routes Nitro
 server/middleware/    contrôle de l'en-tête Host
+server/plugins/       fermeture des flux SSE à l'arrêt
 server/utils/         db, validation, projets, chemins, ouverture de fichiers
 scripts/
   setup.mjs           installation multiplateforme

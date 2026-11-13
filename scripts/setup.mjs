@@ -19,7 +19,7 @@ import { spawnSync } from 'node:child_process'
 import { copyFileSync, existsSync, lstatSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { delimiter, dirname, join, resolve } from 'node:path'
-import { BOARD_URL, HOST, LOG_FILE, PORT, ROOT, SERVER_ENTRY, isUp, startServer, stopServer, waitUntil } from './lib/board.mjs'
+import { BOARD_URL, HOST, LOG_FILE, PORT, ROOT, SERVER_ENTRY, SYSTEMD_UNIT, isUp, startServer, stopServer, waitUntil } from './lib/board.mjs'
 import { addBoardHooks, removeBoardHooks } from './lib/claude-settings.mjs'
 
 const args = new Set(process.argv.slice(2))
@@ -34,7 +34,6 @@ const HOME = homedir()
 const BIN_DIR = join(HOME, '.local', 'bin')
 const COMMANDS = ['board-note', 'board-server']
 const CLAUDE_SETTINGS = join(HOME, '.claude', 'settings.json')
-const SYSTEMD_UNIT = join(HOME, '.config', 'systemd', 'user', 'board.service')
 const LAUNCH_AGENT = join(HOME, 'Library', 'LaunchAgents', 'local.board.server.plist')
 const STARTUP_DIR = join(
   process.env.APPDATA ?? join(HOME, 'AppData', 'Roaming'),

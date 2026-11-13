@@ -1,4 +1,4 @@
-import { useEmitter, type NoteEvent } from '../utils/events'
+import { trackStream, useEmitter, type NoteEvent } from '../utils/events'
 
 export default defineEventHandler(async (event) => {
   setHeader(event, 'Content-Type', 'text/event-stream')
@@ -24,8 +24,11 @@ export default defineEventHandler(async (event) => {
     res.write(`: heartbeat\n\n`)
   }, 25_000)
 
+  const untrack = trackStream(() => res.end())
+
   await new Promise<void>((resolve) => {
     event.node.req.on('close', () => {
+      untrack()
       clearInterval(heartbeat)
       emitter.off('note', listener)
       resolve()

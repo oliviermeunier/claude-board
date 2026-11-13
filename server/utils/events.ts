@@ -26,3 +26,16 @@ export function useEmitter(): EventEmitter {
 export function emitNoteEvent(event: NoteEvent): void {
   useEmitter().emit('note', event)
 }
+
+const streams = new Set<() => void>()
+
+// Registers an open SSE stream; the returned function forgets it once the client has left.
+export function trackStream(close: () => void): () => void {
+  streams.add(close)
+  return () => streams.delete(close)
+}
+
+export function closeStreams(): void {
+  for (const close of streams) close()
+  streams.clear()
+}
