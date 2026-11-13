@@ -166,7 +166,7 @@ d'abord `$OutputEncoding = [Text.UTF8Encoding]::new()`.
 - **Recherche** dans toutes les notes, tous projets confondus (titre et contenu) ; le projet de chaque résultat est
   indiqué devant son titre. « Tout effacer » ne vide que l'onglet courant.
 - Cliquer une note pour la déplier. Au survol de l'en-tête : modifier (Ctrl+Entrée enregistre, Échap annule), copier
-  le markdown, supprimer. Chaque bloc de code a son bouton copier.
+  le markdown, supprimer (un second clic confirme). Chaque bloc de code a son bouton copier.
 - **Cases à cocher** : les listes `- [ ] à faire` d'une note deviennent des cases cliquables ; cocher met à jour le
   markdown de la note.
 - **Reprendre la session** : une note venue de Claude Code affiche, dépliée, le dossier de la session et un bouton qui
@@ -179,7 +179,7 @@ d'abord `$OutputEncoding = [Text.UTF8Encoding]::new()`.
 - **Notifications** (cloche en haut à droite) : une alerte du bureau quand une note arrive alors que le board n'est
   pas affiché.
 - **Raccourcis clavier** (`?` pour la liste) : `/` rechercher, `j` / `k` note suivante / précédente, `Entrée` déplier,
-  `e` modifier, `p` épingler, `c` copier, `Suppr` supprimer, `h` / `l` onglet précédent / suivant, `Échap` fermer.
+  `e` modifier, `p` épingler, `c` copier, `Suppr` supprimer (une seconde fois pour confirmer), `h` / `l` onglet précédent / suivant, `Échap` fermer.
 - En haut à droite : taille du texte (compact, normal, grand) et thème (système, clair, sombre), mémorisés dans le
   navigateur.
 

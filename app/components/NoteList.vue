@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, nextTick, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useNotes, type Note } from '../composables/useNotes'
 import { useSSE } from '../composables/useSSE'
 import { useNotifications } from '../composables/useNotifications'
@@ -246,6 +246,8 @@ interface CardApi {
   startEdit: () => void
   togglePin: () => void
   copyBody: () => void
+  armOrConfirmDelete: () => boolean
+  disarm: () => void
 }
 
 const searchBar = ref<{ focus: () => void } | null>(null)
@@ -281,9 +283,14 @@ function switchTab(step: number) {
   selectedId.value = null
 }
 
+watch(selectedId, (_, previous) => {
+  if (previous !== null) cards.get(previous)?.disarm()
+})
+
 function deleteSelected() {
   const id = selectedId.value
   if (id === null) return
+  if (!cards.get(id)?.armOrConfirmDelete()) return
   moveSelection(1)
   if (selectedId.value === id) moveSelection(-1)
   if (selectedId.value === id) selectedId.value = null

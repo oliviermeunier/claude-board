@@ -9,7 +9,7 @@ const SHORTCUTS: [string[], string][] = [
   [['e'], 'Modifier'],
   [['p'], 'Épingler / désépingler'],
   [['c'], 'Copier le markdown'],
-  [['Suppr'], 'Supprimer (annulable)'],
+  [['Suppr'], 'Supprimer (deux fois pour confirmer, annulable)'],
   [['h'], 'Onglet précédent'],
   [['l'], 'Onglet suivant'],
   [['Échap'], 'Fermer, désélectionner, vider la recherche'],
